@@ -991,7 +991,7 @@ function documentoHtml(tipo,obj){
   ${Number(obj.desconto||0)>0?`<p class="tot">Desconto: ${money(obj.desconto)}</p>`:''}
   <p class="tot">Total: ${money(obj.total)}</p>
   <div class="foot">Documento gerado pelo DW ERP.</div>
-  <script>window.onload=()=>window.print()</script></body></html>`;
+  <script>window.onload=()=>window.print()<\/script></body></html>`;
 }
 function abrirDocumento(html){
   const w=window.open('','_blank','width=900,height=700');
