@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <title>DW ERP — V1.5 Fiscal e Comercial</title>
+  
+  <style>
+
+:root{
+  --bg:#f3f4f6;--panel:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
+  --primary:#f97316;--primary-dark:#ea580c;--dark:#111827;--success:#16a34a;--danger:#dc2626;--warn:#d97706;
+}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}.app-shell{display:flex;min-height:100vh}
+.sidebar{width:248px;background:#0f172a;color:#fff;padding:22px 16px;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:20}
+.brand{display:flex;gap:12px;align-items:center;padding:0 8px 22px}.brand-mark{width:42px;height:42px;border-radius:12px;background:var(--primary);display:grid;place-items:center;font-weight:900}.brand strong{display:block;font-size:18px}.brand small{color:#94a3b8}
+nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:transparent;color:#cbd5e1;padding:12px 14px;border-radius:10px;text-align:left;cursor:pointer;display:flex;gap:10px;align-items:center}.nav-item:hover,.nav-item.active{background:#1e293b;color:#fff}.sidebar-footer{margin-top:auto;color:#94a3b8;font-size:13px;padding:12px}.status-dot{display:inline-block;width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:6px}
+.main{margin-left:248px;width:calc(100% - 248px);padding:24px}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}.top-left{display:flex;gap:12px;align-items:center}.topbar h1{margin:0;font-size:26px}.topbar p{margin:3px 0 0;color:var(--muted)}.top-actions{display:flex;gap:10px}
+.icon-btn{border:0;background:transparent;font-size:20px;cursor:pointer}.top-left>.icon-btn{display:none}
+.btn{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}.btn.primary{background:var(--primary);color:#fff}.btn.primary:hover{background:var(--primary-dark)}.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--text)}.btn:disabled{opacity:.5;cursor:not-allowed}.full{width:100%}
+.view{display:none}.view.active{display:block}
+.cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}.cards-grid.three{grid-template-columns:repeat(3,1fr)}
+.metric-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 4px 14px rgba(15,23,42,.04)}.metric-card span{display:block;color:var(--muted);font-size:14px}.metric-card strong{display:block;font-size:26px;margin:7px 0}.metric-card small{color:var(--muted)}
+.two-col{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 4px 14px rgba(15,23,42,.04)}.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.panel-head h2{margin:0;font-size:18px}.link-btn{background:none;border:0;color:var(--primary-dark);cursor:pointer;font-weight:700}.link-btn.danger{color:var(--danger)}
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}.input{border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:10px 12px;outline:none}.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(249,115,22,.12)}.input.grow{flex:1;min-width:220px}.input.small{width:110px}.table-panel{padding:0;overflow:hidden}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:780px}th,td{padding:13px 14px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{color:var(--muted);font-weight:700;background:#fafafa}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dcfce7;color:#166534}.badge.warn{background:#ffedd5;color:#9a3412}.badge.danger{background:#fee2e2;color:#991b1b}
+.empty{padding:24px;text-align:center;color:var(--muted)}.row-actions{display:flex;gap:8px}.mini-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
+.pdv-grid{display:grid;grid-template-columns:1fr 380px;gap:16px}.product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.product-card{border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}.product-card:hover{border-color:var(--primary);background:#fff7ed}.product-card strong,.product-card span{display:block}.product-card small{color:var(--muted)}.product-card .price{margin-top:8px;font-weight:800;color:var(--primary-dark)}.sticky-cart{position:sticky;top:20px;height:max-content}.cart-line{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.cart-line small{display:block;color:var(--muted)}.qty-controls{display:flex;gap:5px;align-items:center}.cart-summary{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.cart-summary>div{display:flex;justify-content:space-between;align-items:center;margin:8px 0}.cart-summary .total{font-size:20px}.helper{font-size:12px;color:var(--muted);line-height:1.4}
+.settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.settings-grid label{display:block;font-size:13px;color:var(--muted);margin:10px 0}.settings-grid label input,.settings-grid label select{margin-top:6px}.cert-box{border:1px dashed #cbd5e1;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px}.file-btn{display:inline-block;margin-left:6px}
+.modal{border:0;border-radius:16px;padding:0;max-width:720px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.25)}.modal::backdrop{background:rgba(15,23,42,.55)}.modal form,.small-modal>div,.small-modal>.pix-box{padding:0}.modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px;border-bottom:1px solid var(--line)}.modal-head h2{margin:0}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px}.form-grid label{font-size:13px;color:var(--muted)}.form-grid input{margin-top:5px}.modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:18px;border-top:1px solid var(--line)}.small-modal{max-width:430px}.pix-box{padding:22px!important;text-align:center}.qr-placeholder{width:170px;height:170px;margin:0 auto 14px;background:repeating-linear-gradient(45deg,#111 0 8px,#fff 8px 16px);border:12px solid #fff;box-shadow:0 0 0 1px var(--line);display:grid;place-items:center;font-weight:900;font-size:28px;color:#f97316;text-shadow:0 1px 2px #fff}.pix-box strong{display:block;font-size:28px;margin:8px}.pix-box p{color:var(--muted);font-size:13px}
+.list-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.list-row:last-child{border-bottom:0}.list-row small{color:var(--muted);display:block}
+@media(max-width:1050px){.cards-grid{grid-template-columns:repeat(2,1fr)}.two-col,.pdv-grid,.settings-grid{grid-template-columns:1fr}.product-grid{grid-template-columns:repeat(2,1fr)}.sticky-cart{position:static}}
+@media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:translateX(0)}.main{margin-left:0;width:100%;padding:14px}.top-left>.icon-btn{display:block}.top-actions .ghost{display:none}.topbar h1{font-size:21px}.topbar p{font-size:13px}.cards-grid,.cards-grid.three{grid-template-columns:1fr 1fr}.metric-card strong{font-size:22px}.form-grid{grid-template-columns:1fr}.product-grid{grid-template-columns:1fr 1fr}.toolbar .input{width:100%}.toolbar .btn{width:100%}}
+@media(max-width:470px){.cards-grid,.cards-grid.three,.product-grid{grid-template-columns:1fr}.top-actions .primary{padding:9px 10px}.metric-card{padding:15px}}
+
+.cloud-pill{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:800;color:var(--muted)}
+.auth-modal::backdrop{background:rgba(15,23,42,.72)}
+.auth-box{padding:22px}.auth-box>p{color:var(--muted);margin-top:0}.auth-box label{display:block;color:var(--muted);font-size:13px;margin:12px 0}.auth-box label input{margin-top:6px}.auth-box .btn{margin-top:9px}.auth-box .link-btn{margin-top:14px}.auth-error{min-height:20px;color:var(--danger);font-size:13px;font-weight:700;margin:8px 0}
+.syncing{animation:pulse 1s infinite alternate}@keyframes pulse{from{opacity:.45}to{opacity:1}}
+
+@media(min-width:1200px){.cards-grid{grid-template-columns:repeat(5,1fr)}}
+@media print{
+  .sidebar,.topbar,.toolbar,.btn,.link-btn{display:none!important}
+  .main{margin:0!important;width:100%!important;padding:0!important}
+  .view{display:none!important}
+  #view-vendas{display:block!important}
+  body{background:#fff}
+  .panel{box-shadow:none;border:0}
+}
+
+.dual-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+@media(min-width:1200px){.cards-grid{grid-template-columns:repeat(6,1fr)}}
+@media(max-width:760px){.dual-actions{grid-template-columns:1fr}}
+
+.payment-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.payment-grid label{font-size:12px;color:var(--muted)}@media(max-width:760px){.payment-grid{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">DW</div>
+        <div><strong>DW ERP</strong><small>Versão 1.5</small></div>
+      </div>
+
+      <nav id="nav">
+        <button class="nav-item active" data-view="dashboard">🏠 <span>Dashboard</span></button>
+        <button class="nav-item" data-view="produtos">📦 <span>Mercadorias</span></button>
+        <button class="nav-item" data-view="estoque">🏷️ <span>Estoque</span></button>
+        <button class="nav-item" data-view="pdv">🛒 <span>PDV / Vendas</span></button>
+        <button class="nav-item" data-view="orcamentos">📝 <span>Orçamentos</span></button>
+        <button class="nav-item" data-view="pedidos">📋 <span>Pedidos</span></button>
+        <button class="nav-item" data-view="clientes">👥 <span>Clientes</span></button>
+        <button class="nav-item" data-view="fornecedores">🚚 <span>Fornecedores</span></button>
+        <button class="nav-item" data-view="compras">🧾 <span>Compras</span></button>
+        <button class="nav-item" data-view="vendas">📊 <span>Histórico de vendas</span></button>
+        <button class="nav-item" data-view="financeiro">💰 <span>Financeiro</span></button>
+        <button class="nav-item" data-view="vendedores">🤝 <span>Vendedores</span></button>
+        <button class="nav-item" data-view="fiscal">🧾 <span>Fiscal</span></button>
+        <button class="nav-item" data-view="caixa">🧮 <span>Caixa</span></button>
+        <button class="nav-item" data-view="contas">📅 <span>Contas</span></button>
+        <button class="nav-item" data-view="configuracoes">⚙️ <span>Configurações</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="status-dot"></span> Dados locais ativos
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="top-left">
+          <button id="menuBtn" class="icon-btn">☰</button>
+          <div>
+            <h1 id="pageTitle">Dashboard</h1>
+            <p id="pageSubtitle">Visão geral do seu negócio</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="btn ghost" id="exportBtn">Exportar backup</button>
+          <button class="btn primary" data-open-sale>Nova venda</button>
+        </div>
+      </header>
+
+      <section id="view-dashboard" class="view active">
+        <div class="cards-grid">
+          <article class="metric-card">
+            <span>Faturamento hoje</span>
+            <strong id="mFaturamento">R$ 0,00</strong>
+            <small>Vendas confirmadas</small>
+          </article>
+          <article class="metric-card">
+            <span>Produtos cadastrados</span>
+            <strong id="mProdutos">0</strong>
+            <small>Itens ativos</small>
+          </article>
+          <article class="metric-card">
+            <span>Estoque baixo</span>
+            <strong id="mEstoqueBaixo">0</strong>
+            <small>Abaixo do mínimo</small>
+          </article>
+          <article class="metric-card">
+            <span>Contas a receber</span>
+            <strong id="mReceber">R$ 0,00</strong>
+            <small>Lançamentos em aberto</small>
+          </article>
+          <article class="metric-card">
+            <span>Valor do estoque</span>
+            <strong id="mEstoqueValor">R$ 0,00</strong>
+            <small>Com base no custo</small>
+          </article>
+          <article class="metric-card">
+            <span>Lucro bruto hoje</span>
+            <strong id="mLucroHoje">R$ 0,00</strong>
+            <small>Venda menos custo dos itens</small>
+          </article>
+        </div>
+
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><h2>Últimas vendas</h2><button class="link-btn" data-view-link="pdv">Ver PDV</button></div>
+            <div id="ultimasVendas"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Alertas de estoque</h2><button class="link-btn" data-view-link="estoque">Ver estoque</button></div>
+            <div id="alertasEstoque"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-produtos" class="view">
+        <div class="toolbar">
+          <input id="produtoBusca" class="input grow" placeholder="Buscar por nome, SKU ou código de barras..." />
+          <button class="btn primary" id="novoProdutoBtn">+ Nova mercadoria</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>SKU</th><th>Mercadoria</th><th>Categoria</th><th>NCM</th><th>Custo</th><th>Venda</th><th>Lucro un.</th><th>Margem</th><th>Estoque</th><th>Fiscal</th><th>Status</th><th></th></tr></thead>
+              <tbody id="produtosTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-estoque" class="view">
+        <div class="toolbar">
+          <select id="estoqueProduto" class="input grow"></select>
+          <select id="estoqueTipo" class="input">
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
+            <option value="ajuste">Ajuste</option>
+          </select>
+          <input id="estoqueQtd" class="input" type="number" min="0" step="1" placeholder="Quantidade" />
+          <input id="estoqueObs" class="input grow" placeholder="Observação (compra, perda, inventário...)" />
+          <button class="btn primary" id="movimentarBtn">Registrar</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="panel-head"><h2>Movimentações</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Quantidade</th><th>Observação</th></tr></thead>
+              <tbody id="estoqueTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-pdv" class="view">
+        <div class="pdv-grid">
+          <section class="panel">
+            <div class="panel-head"><h2>Produtos</h2></div>
+            <input id="pdvBusca" class="input full" placeholder="Buscar produto, SKU ou código de barras..." />
+            <div id="pdvProdutos" class="product-grid"></div>
+          </section>
+          <section class="panel sticky-cart">
+            <div class="panel-head"><h2>Carrinho</h2><button class="link-btn danger" id="limparCarrinho">Limpar</button></div>
+            <div id="carrinhoItens"></div>
+            <div class="cart-summary">
+              <div><span>Subtotal</span><strong id="cartSubtotal">R$ 0,00</strong></div>
+              <div><span>Desconto</span><input id="cartDesconto" class="input small" type="number" min="0" step="0.01" value="0" /></div>
+              <div class="total"><span>Total</span><strong id="cartTotal">R$ 0,00</strong></div>
+            </div>
+            <select id="vendaCliente" class="input full"></select>
+            <select id="vendaVendedor" class="input full"></select>
+            <select id="pagamentoTipo" class="input full">
+              <option value="pix">Pix</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="cartao_credito">Cartão de crédito</option>
+              <option value="cartao_debito">Cartão de débito</option>
+              <option value="transferencia">Transferência</option>
+              <option value="boleto">Boleto</option>
+              <option value="crediario">Crediário / A prazo</option>
+            </select>
+            <div class="payment-grid">
+              <label>Condição<select id="pagamentoCondicao" class="input full">
+                <option value="avista">À vista</option>
+                <option value="parcelado">Parcelado</option>
+              </select></label>
+              <label>Parcelas<select id="pagamentoParcelas" class="input full"></select></label>
+            </div>
+            <div class="dual-actions"><button class="btn ghost full" id="salvarOrcamentoBtn">Salvar orçamento</button><button class="btn primary full" id="finalizarVenda">Finalizar venda</button></div>
+            <p class="helper">Na V1, Pix fica em modo demonstração. A confirmação automática será ligada ao provedor/API no backend.</p>
+          </section>
+        </div>
+      </section>
+
+      
+      <section id="view-orcamentos" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Orçamentos abertos</span><strong id="orcAbertos">0</strong><small>Aguardando decisão</small></article>
+          <article class="metric-card"><span>Valor em aberto</span><strong id="orcValorAberto">R$ 0,00</strong><small>Total dos orçamentos ativos</small></article>
+          <article class="metric-card"><span>Convertidos</span><strong id="orcConvertidos">0</strong><small>Viraram pedido/venda</small></article>
+        </div>
+        <div class="toolbar">
+          <input id="orcBusca" class="input grow" placeholder="Buscar orçamento por número ou cliente..." />
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Orçamento</th><th>Data</th><th>Validade</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="orcamentosTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-pedidos" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Pedidos abertos</span><strong id="pedAbertos">0</strong><small>Aguardando faturamento</small></article>
+          <article class="metric-card"><span>Valor em pedidos</span><strong id="pedValor">R$ 0,00</strong><small>Pedidos não concluídos</small></article>
+          <article class="metric-card"><span>Concluídos</span><strong id="pedConcluidos">0</strong><small>Pedidos faturados</small></article>
+        </div>
+        <div class="toolbar">
+          <input id="pedBusca" class="input grow" placeholder="Buscar pedido por número ou cliente..." />
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pedido</th><th>Data</th><th>Cliente</th><th>Total</th><th>Origem</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="pedidosTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+<section id="view-clientes" class="view">
+        <div class="toolbar">
+          <input id="clienteNome" class="input grow" placeholder="Nome do cliente" />
+          <input id="clienteDoc" class="input" placeholder="CPF/CNPJ" />
+          <input id="clienteTelefone" class="input" placeholder="Telefone" />
+          <button class="btn primary" id="addClienteBtn">Adicionar</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Cliente</th><th>CPF/CNPJ</th><th>Telefone</th><th>Compras</th><th></th></tr></thead>
+              <tbody id="clientesTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      
+      <section id="view-fornecedores" class="view">
+        <div class="toolbar">
+          <input id="fornNome" class="input grow" placeholder="Nome / Razão social" />
+          <input id="fornDoc" class="input" placeholder="CPF/CNPJ" />
+          <input id="fornTelefone" class="input" placeholder="Telefone" />
+          <button class="btn primary" id="addFornecedorBtn">Adicionar</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fornecedor</th><th>CPF/CNPJ</th><th>Telefone</th><th>Total comprado</th><th></th></tr></thead>
+              <tbody id="fornecedoresTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-compras" class="view">
+        <div class="toolbar">
+          <select id="compraFornecedor" class="input grow"></select>
+          <select id="compraProduto" class="input grow"></select>
+          <input id="compraQtd" class="input" type="number" min="1" step="1" placeholder="Qtd." />
+          <input id="compraCusto" class="input" type="number" min="0" step="0.01" placeholder="Custo unitário" />
+          <select id="compraStatus" class="input">
+            <option value="pago">Pago</option>
+            <option value="aberto">A pagar</option>
+          </select>
+          <button class="btn primary" id="registrarCompraBtn">Registrar compra</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Data</th><th>Fornecedor</th><th>Produto</th><th>Qtd.</th><th>Custo unit.</th><th>Total</th><th>Status</th></tr></thead>
+              <tbody id="comprasTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-vendas" class="view">
+        <div class="toolbar">
+          <input id="vendasBusca" class="input grow" placeholder="Buscar nº da venda, cliente ou pagamento..." />
+          <button class="btn ghost" id="imprimirVendasBtn">Imprimir relatório</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Venda</th><th>Data</th><th>Cliente</th><th>Vendedor</th><th>Pagamento</th><th>Parcelas</th><th>Total</th><th>Comissão</th><th>Status</th><th>Itens</th><th>Ação</th></tr></thead>
+              <tbody id="vendasTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+<section id="view-financeiro" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Receitas</span><strong id="fReceitas">R$ 0,00</strong></article>
+          <article class="metric-card"><span>Despesas</span><strong id="fDespesas">R$ 0,00</strong></article>
+          <article class="metric-card"><span>Saldo</span><strong id="fSaldo">R$ 0,00</strong></article>
+        </div>
+        <div class="toolbar">
+          <select id="finTipo" class="input"><option value="receita">Receita</option><option value="despesa">Despesa</option></select>
+          <input id="finDescricao" class="input grow" placeholder="Descrição" />
+          <input id="finValor" class="input" type="number" min="0" step="0.01" placeholder="Valor" />
+          <select id="finStatus" class="input"><option value="pago">Pago</option><option value="aberto">Em aberto</option></select>
+          <button class="btn primary" id="addFinanceiroBtn">Lançar</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+              <tbody id="financeiroTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      
+            <section id="view-vendedores" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Vendedores ativos</span><strong id="vendAtivos">0</strong><small>Cadastros disponíveis no PDV</small></article>
+          <article class="metric-card"><span>Comissões geradas</span><strong id="vendComissoes">R$ 0,00</strong><small>Sobre vendas pagas</small></article>
+          <article class="metric-card"><span>Vendas com vendedor</span><strong id="vendVendas">0</strong><small>Vendas vinculadas</small></article>
+        </div>
+        <div class="toolbar">
+          <input id="vendNome" class="input grow" placeholder="Nome do vendedor" />
+          <input id="vendComissaoPct" class="input" type="number" min="0" max="100" step="0.1" placeholder="Comissão %" />
+          <button class="btn primary" id="addVendedorBtn">Adicionar vendedor</button>
+        </div>
+        <section class="panel table-panel"><div class="table-wrap"><table>
+          <thead><tr><th>Vendedor</th><th>Comissão padrão</th><th>Vendas</th><th>Total vendido</th><th>Comissão</th><th></th></tr></thead>
+          <tbody id="vendedoresTbody"></tbody>
+        </table></div></section>
+      </section>
+
+      <section id="view-fiscal" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Produtos prontos</span><strong id="fisProdutosOk">0</strong><small>Com NCM, CFOP e tributação</small></article>
+          <article class="metric-card"><span>Produtos pendentes</span><strong id="fisProdutosPend">0</strong><small>Precisam revisão fiscal</small></article>
+          <article class="metric-card"><span>Ambiente</span><strong id="fisAmbienteCard">Homologação</strong><small>Emissão ainda não ativada</small></article>
+        </div>
+        <div class="settings-grid">
+          <section class="panel">
+            <div class="panel-head"><h2>Dados fiscais da empresa</h2><span class="badge warn">Preparação</span></div>
+            <label>Razão social<input id="fisRazao" class="input full" /></label>
+            <label>Inscrição estadual<input id="fisIE" class="input full" /></label>
+            <label>CRT / Regime tributário<select id="fisCRT" class="input full">
+              <option value="">Selecionar</option><option value="1">1 - Simples Nacional</option><option value="2">2 - Simples Nacional - excesso sublimite</option><option value="3">3 - Regime Normal</option><option value="4">4 - Simples Nacional - MEI</option>
+            </select></label>
+            <label>Ambiente<select id="fisAmbiente" class="input full"><option value="homologacao">Homologação</option><option value="producao">Produção</option></select></label>
+            <button class="btn primary" id="salvarFiscalBtn">Salvar dados fiscais</button>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>NF-e / NFC-e</h2><span class="badge warn">Não emitindo</span></div>
+            <p>O ERP está preparado para receber a integração fiscal, mas a emissão real exige backend seguro, certificado digital, sequência fiscal, comunicação com a SEFAZ e tratamento de rejeições/contingência.</p>
+            <div class="cert-box"><strong>Checklist de ativação</strong><span>✓ Cadastro fiscal dos produtos</span><span>✓ Dados fiscais da empresa</span><span>○ Certificado digital A1 no backend</span><span>○ CSC/Token NFC-e protegido no backend</span><span>○ Webservice/API fiscal</span><span>○ Homologação antes de produção</span></div>
+          </section>
+        </div>
+        <section class="panel table-panel" style="margin-top:16px"><div class="panel-head" style="padding:18px"><h2>Revisão fiscal de produtos</h2></div><div class="table-wrap"><table>
+          <thead><tr><th>Produto</th><th>NCM</th><th>CFOP</th><th>CST/CSOSN</th><th>CEST</th><th>Unidade</th><th>Status</th></tr></thead><tbody id="fiscalProdutosTbody"></tbody>
+        </table></div></section>
+      </section>
+
+<section id="view-caixa" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Status do caixa</span><strong id="cxStatus">Fechado</strong><small id="cxAberturaInfo">Nenhuma abertura ativa</small></article>
+          <article class="metric-card"><span>Entradas no caixa</span><strong id="cxEntradas">R$ 0,00</strong><small>Desde a abertura</small></article>
+          <article class="metric-card"><span>Saldo esperado</span><strong id="cxSaldo">R$ 0,00</strong><small>Abertura + entradas - saídas</small></article>
+        </div>
+
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><h2>Abertura / Fechamento</h2></div>
+            <div id="caixaFechadoBox">
+              <label>Valor inicial<input id="cxValorInicial" class="input full" type="number" min="0" step="0.01" placeholder="0,00" /></label>
+              <label>Observação<input id="cxObsAbertura" class="input full" placeholder="Ex.: caixa manhã" /></label>
+              <button class="btn primary full" id="abrirCaixaBtn">Abrir caixa</button>
+            </div>
+            <div id="caixaAbertoBox" style="display:none">
+              <label>Valor contado no fechamento<input id="cxValorContado" class="input full" type="number" min="0" step="0.01" placeholder="0,00" /></label>
+              <label>Observação<input id="cxObsFechamento" class="input full" placeholder="Ex.: conferido pelo responsável" /></label>
+              <button class="btn primary full" id="fecharCaixaBtn">Fechar caixa</button>
+              <p class="helper">O sistema calcula diferença entre saldo esperado e valor contado.</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Resumo por forma de pagamento</h2></div>
+            <div id="caixaFormas"></div>
+          </section>
+        </div>
+
+        <section class="panel table-panel" style="margin-top:16px">
+          <div class="panel-head" style="padding:18px"><h2>Histórico de caixas</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Abertura</th><th>Fechamento</th><th>Inicial</th><th>Esperado</th><th>Contado</th><th>Diferença</th><th>Status</th></tr></thead>
+              <tbody id="caixaHistoricoTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-contas" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>A receber em aberto</span><strong id="ctReceber">R$ 0,00</strong><small>Inclui vencidas e futuras</small></article>
+          <article class="metric-card"><span>A pagar em aberto</span><strong id="ctPagar">R$ 0,00</strong><small>Inclui vencidas e futuras</small></article>
+          <article class="metric-card"><span>Vencidas</span><strong id="ctVencidas">0</strong><small>Contas não baixadas</small></article>
+        </div>
+
+        <div class="toolbar">
+          <select id="contaTipo" class="input">
+            <option value="receita">A receber</option>
+            <option value="despesa">A pagar</option>
+          </select>
+          <input id="contaDescricao" class="input grow" placeholder="Descrição" />
+          <input id="contaValor" class="input" type="number" min="0" step="0.01" placeholder="Valor" />
+          <input id="contaVencimento" class="input" type="date" />
+          <button class="btn primary" id="addContaBtn">Adicionar conta</button>
+        </div>
+
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ação</th></tr></thead>
+              <tbody id="contasTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+<section id="view-configuracoes" class="view">
+        <div class="settings-grid">
+          <section class="panel">
+            <div class="panel-head"><h2>Empresa</h2></div>
+            <label>Nome fantasia<input id="cfgEmpresa" class="input full" /></label>
+            <label>CNPJ<input id="cfgCnpj" class="input full" /></label>
+            <label>Chave Pix<input id="cfgPix" class="input full" placeholder="Chave Pix principal" /></label>
+            <button class="btn primary" id="salvarConfig">Salvar configurações</button>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Pix automático</h2><span class="badge warn">Preparado</span></div>
+            <p>Estrutura pronta para integração via API + webhook. O provedor será configurado no backend para gerar QR Code dinâmico e confirmar pagamento automaticamente.</p>
+            <label>Provedor<select id="cfgPixProvider" class="input full">
+              <option value="">Selecionar depois</option>
+              <option>Mercado Pago</option>
+              <option>PagBank</option>
+              <option>Efí / Gerencianet</option>
+              <option>Banco com API Pix</option>
+            </select></label>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Certificado digital</h2><span class="badge warn">Backend obrigatório</span></div>
+            <p>O certificado A1 (.pfx/.p12) não deve ser salvo no navegador. Na versão online, o upload será criptografado no servidor e usado pelos módulos fiscais.</p>
+            <div class="cert-box">
+              <strong>Certificado A1</strong>
+              <span>Nenhum certificado configurado</span>
+              <button class="btn ghost" disabled>Enviar certificado</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Backup</h2></div>
+            <p>Exporte os dados locais da V1 em JSON. Quando ligarmos o banco online, os backups passam a ser centralizados.</p>
+            <button class="btn ghost" id="exportConfigBtn">Exportar dados</button>
+            <label class="btn ghost file-btn">Importar dados<input type="file" id="importInput" accept="application/json" hidden /></label>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="produtoModal" class="modal">
+    <form method="dialog" id="produtoForm">
+      <div class="modal-head"><h2 id="produtoModalTitle">Nova mercadoria</h2><button value="cancel" class="icon-btn">✕</button></div>
+      <input type="hidden" id="produtoId" />
+      <div class="form-grid">
+        <label>Nome<input id="pNome" class="input full" required /></label>
+        <label>SKU<input id="pSku" class="input full" required /></label>
+        <label>Código de barras<input id="pBarcode" class="input full" /></label>
+        <label>Categoria<input id="pCategoria" class="input full" /></label>
+        <label>Custo<input id="pCusto" class="input full" type="number" min="0" step="0.01" required /></label>
+        <label>Preço de venda<input id="pVenda" class="input full" type="number" min="0" step="0.01" required /></label>
+        <label>Lucro unitário<input id="pLucroPreview" class="input full" readonly /></label>
+        <label>Margem sobre venda<input id="pMargemPreview" class="input full" readonly /></label>
+        <label>Estoque inicial<input id="pEstoque" class="input full" type="number" min="0" step="1" required /></label>
+        <label>Estoque mínimo<input id="pMinimo" class="input full" type="number" min="0" step="1" value="2" required /></label>
+        <label>Unidade<select id="pUnidade" class="input full"><option value="UN">UN - Unidade</option><option value="KG">KG - Quilograma</option><option value="M">M - Metro</option><option value="M2">M2 - Metro quadrado</option><option value="LT">LT - Litro</option><option value="CX">CX - Caixa</option><option value="PCT">PCT - Pacote</option></select></label>
+        <label>NCM<input id="pNcm" class="input full" maxlength="8" placeholder="8 dígitos" /></label>
+        <label>CEST<input id="pCest" class="input full" maxlength="7" placeholder="Quando aplicável" /></label>
+        <label>CFOP padrão<input id="pCfop" class="input full" maxlength="4" placeholder="Ex.: 5102" /></label>
+        <label>CST / CSOSN<input id="pCst" class="input full" maxlength="4" placeholder="Ex.: 102 / 00" /></label>
+        <label>Origem da mercadoria<select id="pOrigem" class="input full"><option value="0">0 - Nacional</option><option value="1">1 - Estrangeira importação direta</option><option value="2">2 - Estrangeira adquirida no mercado interno</option><option value="3">3 - Nacional com conteúdo importação superior a 40%</option><option value="4">4 - Nacional processos produtivos básicos</option><option value="5">5 - Nacional com conteúdo importação até 40%</option><option value="6">6 - Estrangeira importação direta sem similar nacional</option><option value="7">7 - Estrangeira adquirida internamente sem similar nacional</option><option value="8">8 - Nacional com conteúdo importação superior a 70%</option></select></label>
+      </div>
+      <div class="modal-actions"><button value="cancel" class="btn ghost">Cancelar</button><button type="button" class="btn primary" id="salvarProdutoBtn">Salvar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="pixModal" class="modal small-modal">
+    <div class="modal-head"><h2>Pagamento via Pix</h2><button id="fecharPix" class="icon-btn">✕</button></div>
+    <div class="pix-box">
+      <div class="qr-placeholder">QR<br/>PIX</div>
+      <strong id="pixValor">R$ 0,00</strong>
+      <span id="pixStatus" class="badge warn">Aguardando pagamento</span>
+      <p>Modo demonstração da V1. Na versão integrada, esta tela será atualizada automaticamente pelo webhook do banco/provedor.</p>
+      <button id="simularPixPago" class="btn primary full">Simular confirmação do Pix</button>
+    </div>
+  </dialog>
+  <script>
+
+const KEY='dw_erp_v1';
+const todayISO=()=>new Date().toISOString();
+const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const uid=()=>crypto?.randomUUID?.() || (Date.now()+'-'+Math.random().toString(16).slice(2));
+const datePlusDays=(days)=>{const d=new Date();d.setDate(d.getDate()+days);return d.toISOString().slice(0,10)};
+const itemUnitPrice=i=>Number(i.unitPrice ?? state.produtos.find(p=>p.id===i.produtoId)?.venda ?? 0);
+const itemUnitCost=i=>Number(i.unitCost ?? state.produtos.find(p=>p.id===i.produtoId)?.custo ?? 0);
+
+const defaultState={
+  produtos:[],
+  clientes:[{id:uid(),nome:'Consumidor Final',doc:'',telefone:''}],
+  fornecedores:[],
+  compras:[],
+  caixas:[],
+  caixaAtual:null,
+  contas:[],
+  orcamentos:[],
+  pedidos:[],
+  vendedores:[],
+  fiscalConfig:{razao:'',ie:'',crt:'',ambiente:'homologacao'},
+  movimentos:[],
+  vendas:[],
+  financeiro:[],
+  carrinho:[],
+  config:{empresa:'DW ERP',cnpj:'',pix:'',pixProvider:''}
+};
+let state=load();
+state.fornecedores=state.fornecedores||[];
+state.compras=state.compras||[];
+state.caixas=state.caixas||[];
+state.caixaAtual=state.caixaAtual||null;
+state.contas=state.contas||[];
+state.orcamentos=state.orcamentos||[];
+state.pedidos=state.pedidos||[];
+state.vendedores=state.vendedores||[];
+state.fiscalConfig=state.fiscalConfig||{razao:'',ie:'',crt:'',ambiente:'homologacao'};
+let vendaPixPendente=null;
+state.pdvCliente=state.pdvCliente||state.clientes[0]?.id||'';
+
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    return raw?{...structuredClone(defaultState),...JSON.parse(raw)}:structuredClone(defaultState);
+  }catch(e){return structuredClone(defaultState)}
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
+function el(id){return document.getElementById(id)}
+function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+const meta={
+  dashboard:['Dashboard','Visão geral do seu negócio'],
+  produtos:['Mercadorias','Cadastro e preços dos produtos'],
+  estoque:['Estoque','Entradas, saídas e inventário'],
+  pdv:['PDV / Vendas','Venda rápida com baixa de estoque'],
+  orcamentos:['Orçamentos','Propostas comerciais sem baixa de estoque'],
+  pedidos:['Pedidos','Pedidos aprovados aguardando faturamento'],
+  clientes:['Clientes','Cadastro e histórico'],
+  fornecedores:['Fornecedores','Cadastro de fornecedores'],
+  compras:['Compras','Entradas de mercadoria e contas a pagar'],
+  vendas:['Histórico de vendas','Todas as vendas registradas'],
+  financeiro:['Financeiro','Receitas, despesas e contas em aberto'],
+  vendedores:['Vendedores','Equipe comercial e comissões'],
+  fiscal:['Fiscal','Preparação para NF-e e NFC-e'],
+  caixa:['Caixa','Abertura, fechamento e conferência'],
+  contas:['Contas','Contas a pagar e a receber'],
+  configuracoes:['Configurações','Empresa, Pix, certificado e backup']
+};
+
+function navigate(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(v=>v.classList.toggle('active',v.dataset.view===view));
+  el('view-'+view).classList.add('active');
+  el('pageTitle').textContent=meta[view][0];
+  el('pageSubtitle').textContent=meta[view][1];
+  el('sidebar').classList.remove('open');
+}
+
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.view)));
+document.querySelectorAll('[data-view-link]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.viewLink)));
+document.querySelectorAll('[data-open-sale]').forEach(b=>b.addEventListener('click',()=>navigate('pdv')));
+el('menuBtn').onclick=()=>el('sidebar').classList.toggle('open');
+
+function renderDashboard(){
+  const now=new Date().toLocaleDateString('pt-BR');
+  const vendasHoje=state.vendas.filter(v=>new Date(v.data).toLocaleDateString('pt-BR')===now && v.status==='pago');
+  el('mFaturamento').textContent=money(vendasHoje.reduce((a,v)=>a+v.total,0));
+  el('mProdutos').textContent=state.produtos.length;
+  const low=state.produtos.filter(p=>Number(p.estoque)<=Number(p.minimo));
+  el('mEstoqueBaixo').textContent=low.length;
+  const receber=state.financeiro.filter(f=>f.tipo==='receita'&&f.status==='aberto').reduce((a,f)=>a+Number(f.valor),0);
+  el('mReceber').textContent=money(receber);
+  const estoqueValor=state.produtos.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.estoque||0)),0);
+  el('mEstoqueValor').textContent=money(estoqueValor);
+  const lucroHoje=vendasHoje.reduce((acc,v)=>{
+    const custo=(v.itens||[]).reduce((s,i)=>s+itemUnitCost(i)*Number(i.qtd||0),0);
+    return acc+(Number(v.total||0)-custo);
+  },0);
+  el('mLucroHoje').textContent=money(lucroHoje);
+
+  el('ultimasVendas').innerHTML=state.vendas.slice(-5).reverse().map(v=>`
+    <div class="list-row"><div><strong>#${esc(v.numero)}</strong><small>${new Date(v.data).toLocaleString('pt-BR')} · ${esc(v.pagamento)}</small></div><div><strong>${money(v.total)}</strong><span class="badge ${v.status==='pago'?'ok':'warn'}">${v.status==='pago'?'Pago':'Pendente'}</span></div></div>
+  `).join('')||'<div class="empty">Nenhuma venda registrada.</div>';
+
+  el('alertasEstoque').innerHTML=low.map(p=>`
+    <div class="list-row"><div><strong>${esc(p.nome)}</strong><small>Estoque mínimo: ${p.minimo}</small></div><div><span class="badge danger">${p.estoque} un.</span></div></div>
+  `).join('')||'<div class="empty">Nenhum produto com estoque baixo.</div>';
+}
+
+function renderProdutos(){
+  const q=el('produtoBusca')?.value?.toLowerCase()||'';
+  const rows=state.produtos.filter(p=>[p.nome,p.sku,p.barcode].join(' ').toLowerCase().includes(q)).map(p=>`
+    <tr>
+      <td>${esc(p.sku)}</td><td><strong>${esc(p.nome)}</strong><br><small>${esc(p.barcode||'')}</small></td><td>${esc(p.categoria||'-')}</td>
+      <td>${esc(p.ncm||'-')}</td>
+      <td>${money(p.custo)}</td><td>${money(p.venda)}</td>
+      <td>${money(Number(p.venda||0)-Number(p.custo||0))}</td>
+      <td>${Number(p.venda)>0?(((Number(p.venda)-Number(p.custo))/Number(p.venda))*100).toFixed(1)+'%':'0,0%'}</td>
+      <td>${p.estoque}</td>
+      <td><span class="badge ${(p.ncm&&p.cfop&&p.cst&&p.unidade)?'ok':'warn'}">${(p.ncm&&p.cfop&&p.cst&&p.unidade)?'Pronto':'Pendente'}</span></td>
+      <td><span class="badge ${Number(p.estoque)<=Number(p.minimo)?'danger':'ok'}">${Number(p.estoque)<=Number(p.minimo)?'Baixo':'Normal'}</span></td>
+      <td><div class="row-actions"><button class="mini-btn" onclick="editProduto('${p.id}')">Editar</button><button class="mini-btn" onclick="delProduto('${p.id}')">Excluir</button></div></td>
+    </tr>`).join('');
+  el('produtosTbody').innerHTML=rows||'<tr><td colspan="12" class="empty">Nenhuma mercadoria cadastrada.</td></tr>';
+}
+
+function updateMarginPreview(){
+  const custo=Number(el('pCusto')?.value||0), venda=Number(el('pVenda')?.value||0);
+  if(el('pLucroPreview'))el('pLucroPreview').value=money(venda-custo);
+  if(el('pMargemPreview'))el('pMargemPreview').value=venda>0?(((venda-custo)/venda)*100).toFixed(1)+'%':'0,0%';
+}
+function openProduto(p=null){
+  el('produtoModalTitle').textContent=p?'Editar mercadoria':'Nova mercadoria';
+  el('produtoId').value=p?.id||'';
+  el('pNome').value=p?.nome||'';
+  el('pSku').value=p?.sku||'';
+  el('pBarcode').value=p?.barcode||'';
+  el('pCategoria').value=p?.categoria||'';
+  el('pCusto').value=p?.custo??'';
+  el('pVenda').value=p?.venda??'';
+  el('pEstoque').value=p?.estoque??0;
+  el('pMinimo').value=p?.minimo??2;
+  el('pUnidade').value=p?.unidade||'UN';
+  el('pNcm').value=p?.ncm||'';
+  el('pCest').value=p?.cest||'';
+  el('pCfop').value=p?.cfop||'';
+  el('pCst').value=p?.cst||'';
+  el('pOrigem').value=p?.origem||'0';
+  updateMarginPreview();
+  el('produtoModal').showModal();
+}
+window.editProduto=id=>openProduto(state.produtos.find(p=>p.id===id));
+window.delProduto=id=>{if(confirm('Excluir esta mercadoria?')){state.produtos=state.produtos.filter(p=>p.id!==id);save()}};
+el('novoProdutoBtn').onclick=()=>openProduto();
+el('salvarProdutoBtn').onclick=()=>{
+  const data={
+    id:el('produtoId').value||uid(),nome:el('pNome').value.trim(),sku:el('pSku').value.trim(),
+    barcode:el('pBarcode').value.trim(),categoria:el('pCategoria').value.trim(),
+    custo:Number(el('pCusto').value),venda:Number(el('pVenda').value),
+    estoque:Number(el('pEstoque').value),minimo:Number(el('pMinimo').value),unidade:el('pUnidade').value,ncm:el('pNcm').value.trim(),cest:el('pCest').value.trim(),cfop:el('pCfop').value.trim(),cst:el('pCst').value.trim(),origem:el('pOrigem').value
+  };
+  if(!data.nome||!data.sku||Number.isNaN(data.venda)) return alert('Preencha os campos obrigatórios.');
+  const idx=state.produtos.findIndex(p=>p.id===data.id);
+  if(idx>=0) state.produtos[idx]=data; else state.produtos.push(data);
+  el('produtoModal').close(); save();
+};
+el('produtoBusca').addEventListener('input',renderProdutos);
+el('pCusto').addEventListener('input',updateMarginPreview);
+el('pVenda').addEventListener('input',updateMarginPreview);
+
+function renderEstoque(){
+  el('estoqueProduto').innerHTML='<option value="">Selecione a mercadoria</option>'+state.produtos.map(p=>`<option value="${p.id}">${esc(p.nome)} · estoque ${p.estoque}</option>`).join('');
+  el('estoqueTbody').innerHTML=state.movimentos.slice().reverse().map(m=>{
+    const p=state.produtos.find(p=>p.id===m.produtoId);
+    return `<tr><td>${new Date(m.data).toLocaleString('pt-BR')}</td><td>${esc(p?.nome||'Produto removido')}</td><td>${esc(m.tipo)}</td><td>${m.qtd}</td><td>${esc(m.obs||'-')}</td></tr>`
+  }).join('')||'<tr><td colspan="5" class="empty">Sem movimentações.</td></tr>';
+}
+el('movimentarBtn').onclick=()=>{
+  const id=el('estoqueProduto').value,tipo=el('estoqueTipo').value,qtd=Number(el('estoqueQtd').value),obs=el('estoqueObs').value.trim();
+  const p=state.produtos.find(p=>p.id===id); if(!p||!Number.isFinite(qtd)) return alert('Selecione o produto e informe a quantidade.');
+  if(tipo==='entrada') p.estoque+=qtd;
+  if(tipo==='saida'){if(qtd>p.estoque)return alert('Estoque insuficiente.');p.estoque-=qtd}
+  if(tipo==='ajuste') p.estoque=qtd;
+  state.movimentos.push({id:uid(),produtoId:id,tipo,qtd,obs,data:todayISO()});
+  el('estoqueQtd').value='';el('estoqueObs').value='';save();
+};
+
+function renderPdv(){
+  const q=el('pdvBusca')?.value?.toLowerCase()||'';
+  el('pdvProdutos').innerHTML=state.produtos.filter(p=>[p.nome,p.sku,p.barcode].join(' ').toLowerCase().includes(q)).map(p=>`
+    <div class="product-card" onclick="addCart('${p.id}')"><strong>${esc(p.nome)}</strong><small>${esc(p.sku)} · ${p.estoque} un.</small><span class="price">${money(p.venda)}</span></div>
+  `).join('')||'<div class="empty">Cadastre mercadorias para começar a vender.</div>';
+
+  el('vendaCliente').innerHTML=state.clientes.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  const currentVend=el('vendaVendedor')?.value||'';
+  el('vendaVendedor').innerHTML='<option value="">Sem vendedor</option>'+state.vendedores.map(v=>`<option value="${v.id}">${esc(v.nome)} (${Number(v.comissaoPct||0).toFixed(1)}%)</option>`).join('');
+  if([...el('vendaVendedor').options].some(o=>o.value===currentVend))el('vendaVendedor').value=currentVend;
+  if(state.pdvCliente && state.clientes.some(c=>c.id===state.pdvCliente)) el('vendaCliente').value=state.pdvCliente;
+  el('carrinhoItens').innerHTML=state.carrinho.map(i=>{
+    const p=state.produtos.find(p=>p.id===i.produtoId); if(!p)return '';
+    return `<div class="cart-line"><div><strong>${esc(p.nome)}</strong><small>${money(p.venda)} cada</small></div><div class="qty-controls"><button class="mini-btn" onclick="qtyCart('${p.id}',-1)">−</button><b>${i.qtd}</b><button class="mini-btn" onclick="qtyCart('${p.id}',1)">+</button></div></div>`;
+  }).join('')||'<div class="empty">Carrinho vazio.</div>';
+
+  const sub=state.carrinho.reduce((a,i)=>{const p=state.produtos.find(p=>p.id===i.produtoId);return a+(p?Number(p.venda)*i.qtd:0)},0);
+  const desc=Number(el('cartDesconto')?.value||0);
+  el('cartSubtotal').textContent=money(sub); el('cartTotal').textContent=money(Math.max(0,sub-desc));
+}
+window.addCart=id=>{
+  const p=state.produtos.find(p=>p.id===id);if(!p||p.estoque<=0)return alert('Produto sem estoque.');
+  const i=state.carrinho.find(i=>i.produtoId===id); if(i){if(i.qtd>=p.estoque)return alert('Quantidade maior que o estoque.');i.qtd++}else state.carrinho.push({produtoId:id,qtd:1});
+  save();
+};
+window.qtyCart=(id,d)=>{
+  const i=state.carrinho.find(i=>i.produtoId===id),p=state.produtos.find(p=>p.id===id);if(!i||!p)return;
+  i.qtd+=d;if(i.qtd<=0)state.carrinho=state.carrinho.filter(x=>x.produtoId!==id);else if(i.qtd>p.estoque)i.qtd=p.estoque;save();
+};
+el('pdvBusca').addEventListener('input',renderPdv);
+function atualizarParcelas(){
+  const cond=el('pagamentoCondicao').value;
+  const pg=el('pagamentoTipo').value;
+  const max=(pg==='cartao_credito')?12:((pg==='boleto'||pg==='crediario')?24:6);
+  const current=el('pagamentoParcelas').value||'1';
+  el('pagamentoParcelas').innerHTML=Array.from({length:max},(_,i)=>`<option value="${i+1}">${i+1}x</option>`).join('');
+  el('pagamentoParcelas').value=[...el('pagamentoParcelas').options].some(o=>o.value===current)?current:'1';
+  if(cond==='avista')el('pagamentoParcelas').value='1';
+  el('pagamentoParcelas').disabled=cond==='avista';
+}
+el('pagamentoTipo').addEventListener('change',()=>{
+  const pg=el('pagamentoTipo').value;
+  if(['cartao_credito','boleto','crediario'].includes(pg))el('pagamentoCondicao').value='parcelado';
+  else el('pagamentoCondicao').value='avista';
+  atualizarParcelas();
+});
+el('pagamentoCondicao').addEventListener('change',atualizarParcelas);
+
+
+el('pdvBusca').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  const q=el('pdvBusca').value.trim();
+  const p=state.produtos.find(p=>p.barcode===q || p.sku===q);
+  if(p){
+    addCart(p.id);
+    el('pdvBusca').value='';
+    renderPdv();
+  }
+});
+
+el('cartDesconto').addEventListener('input',renderPdv);
+el('vendaCliente').addEventListener('change',()=>{state.pdvCliente=el('vendaCliente').value;localStorage.setItem(KEY,JSON.stringify(state))});
+el('limparCarrinho').onclick=()=>{state.carrinho=[];save()};
+
+function createSale(status='pago'){
+  if(!state.carrinho.length)return null;
+  const sub=state.carrinho.reduce((a,i)=>{const p=state.produtos.find(p=>p.id===i.produtoId);return a+(p?Number(p.venda)*i.qtd:0)},0);
+  const desconto=Number(el('cartDesconto').value||0), total=Math.max(0,sub-desconto);
+  const itens=state.carrinho.map(i=>{const p=state.produtos.find(p=>p.id===i.produtoId);return {...structuredClone(i),unitPrice:Number(p?.venda||0),unitCost:Number(p?.custo||0),nome:p?.nome||'Produto'}});
+  const venda={id:uid(),numero:String(state.vendas.length+1).padStart(5,'0'),data:todayISO(),clienteId:el('vendaCliente').value,pagamento:el('pagamentoTipo').value,status,total,desconto,itens,pedidoId:state._pedidoEmFaturamento||null,orcamentoId:state._orcamentoEmVenda||null};
+  state.vendas.push(venda);
+  if(status==='pago')confirmSale(venda);
+  else save();
+  return venda;
+}
+function confirmSale(venda){
+  if(venda._baixada)return;
+  venda.status='pago';venda._baixada=true;
+  venda.itens.forEach(i=>{const p=state.produtos.find(p=>p.id===i.produtoId);if(p){p.estoque=Math.max(0,p.estoque-i.qtd);state.movimentos.push({id:uid(),produtoId:p.id,tipo:'saida',qtd:i.qtd,obs:`Venda #${venda.numero}`,data:todayISO()})}});
+  const geraReceber=['boleto','crediario'].includes(venda.pagamento)&&Number(venda.parcelas||1)>0;
+  if(geraReceber){
+    const n=Number(venda.parcelas||1), valorParcela=Number(venda.total||0)/n;
+    for(let i=1;i<=n;i++){const d=new Date();d.setDate(d.getDate()+30*i);state.contas.push({id:uid(),tipo:'receita',descricao:`Venda #${venda.numero} - Parcela ${i}/${n}`,valor:valorParcela,vencimento:d.toISOString().slice(0,10),status:'aberto',origem:'venda',vendaId:venda.id,data:todayISO()});}
+    state.financeiro.push({id:uid(),tipo:'receita',descricao:`Venda #${venda.numero} a receber`,valor:venda.total,status:'aberto',data:todayISO()});
+  }else{state.financeiro.push({id:uid(),tipo:'receita',descricao:`Venda #${venda.numero}`,valor:venda.total,status:'pago',data:todayISO()});}
+  if(venda.pedidoId){
+    const ped=state.pedidos.find(p=>p.id===venda.pedidoId);
+    if(ped){ped.status='concluido';ped.vendaId=venda.id;ped.concluidoEm=todayISO()}
+    state._pedidoEmFaturamento=null;
+  }
+  if(venda.orcamentoId){
+    const orc=state.orcamentos.find(o=>o.id===venda.orcamentoId);
+    if(orc){orc.status='convertido';orc.vendaId=venda.id;orc.convertidoEm=todayISO()}
+    state._orcamentoEmVenda=null;
+  }
+  state.carrinho=[];el('cartDesconto').value=0;save();
+}
+el('finalizarVenda').onclick=()=>{
+  if(!state.carrinho.length)return alert('Adicione produtos ao carrinho.');
+  const pg=el('pagamentoTipo').value;
+  if(pg==='pix'){
+    const venda=createSale('pendente'); if(!venda)return;
+    vendaPixPendente=venda.id; el('pixValor').textContent=money(venda.total);el('pixStatus').textContent='Aguardando pagamento';el('pixStatus').className='badge warn';el('pixModal').showModal();
+  }else{
+    const venda=createSale('pago'); if(venda)alert(`Venda #${venda.numero} concluída.`);
+  }
+};
+el('simularPixPago').onclick=()=>{
+  const v=state.vendas.find(v=>v.id===vendaPixPendente);if(!v)return;
+  confirmSale(v);el('pixStatus').textContent='Pagamento confirmado';el('pixStatus').className='badge ok';setTimeout(()=>el('pixModal').close(),650);
+};
+el('fecharPix').onclick=()=>el('pixModal').close();
+
+function renderClientes(){
+  el('clientesTbody').innerHTML=state.clientes.map(c=>{
+    const compras=state.vendas.filter(v=>v.clienteId===c.id&&v.status==='pago').reduce((a,v)=>a+v.total,0);
+    return `<tr><td>${esc(c.nome)}</td><td>${esc(c.doc||'-')}</td><td>${esc(c.telefone||'-')}</td><td>${money(compras)}</td><td><button class="mini-btn" onclick="delCliente('${c.id}')">Excluir</button></td></tr>`
+  }).join('');
+}
+el('addClienteBtn').onclick=()=>{
+  const nome=el('clienteNome').value.trim();if(!nome)return alert('Informe o nome.');
+  state.clientes.push({id:uid(),nome,doc:el('clienteDoc').value.trim(),telefone:el('clienteTelefone').value.trim()});
+  el('clienteNome').value=el('clienteDoc').value=el('clienteTelefone').value='';save();
+};
+window.delCliente=id=>{const c=state.clientes.find(c=>c.id===id);if(c?.nome==='Consumidor Final')return alert('O Consumidor Final não pode ser removido.');if(confirm('Excluir cliente?')){state.clientes=state.clientes.filter(c=>c.id!==id);save()}};
+
+
+
+function cartSnapshot(){
+  return state.carrinho.map(i=>{
+    const p=state.produtos.find(p=>p.id===i.produtoId);
+    return {...structuredClone(i),nome:p?.nome||'Produto',unitPrice:Number(p?.venda||0),unitCost:Number(p?.custo||0)};
+  });
+}
+function calcItensTotal(itens,desconto=0){
+  const subtotal=(itens||[]).reduce((a,i)=>a+itemUnitPrice(i)*Number(i.qtd||0),0);
+  return Math.max(0,subtotal-Number(desconto||0));
+}
+function clienteNome(id){return state.clientes.find(c=>c.id===id)?.nome||'Consumidor Final'}
+
+el('salvarOrcamentoBtn').onclick=()=>{
+  if(!state.carrinho.length)return alert('Adicione produtos ao carrinho antes de salvar o orçamento.');
+  const desconto=Number(el('cartDesconto').value||0);
+  const itens=cartSnapshot();
+  const orc={
+    id:uid(),numero:String(state.orcamentos.length+1).padStart(5,'0'),
+    data:todayISO(),validade:datePlusDays(7),clienteId:el('vendaCliente').value,
+    itens,desconto,total:calcItensTotal(itens,desconto),status:'aberto'
+  };
+  state.orcamentos.push(orc);
+  save();
+  alert(`Orçamento #${orc.numero} salvo. Nenhuma baixa foi feita no estoque.`);
+};
+
+function renderOrcamentos(){
+  const q=(el('orcBusca')?.value||'').toLowerCase();
+  const abertos=state.orcamentos.filter(o=>o.status==='aberto');
+  el('orcAbertos').textContent=abertos.length;
+  el('orcValorAberto').textContent=money(abertos.reduce((a,o)=>a+Number(o.total||0),0));
+  el('orcConvertidos').textContent=state.orcamentos.filter(o=>o.status==='convertido').length;
+
+  el('orcamentosTbody').innerHTML=state.orcamentos.slice().reverse().filter(o=>
+    [o.numero,clienteNome(o.clienteId)].join(' ').toLowerCase().includes(q)
+  ).map(o=>`
+    <tr>
+      <td>#${esc(o.numero)}</td>
+      <td>${new Date(o.data).toLocaleDateString('pt-BR')}</td>
+      <td>${o.validade?new Date(o.validade+'T00:00:00').toLocaleDateString('pt-BR'):'-'}</td>
+      <td>${esc(clienteNome(o.clienteId))}</td>
+      <td>${money(o.total)}</td>
+      <td><span class="badge ${o.status==='aberto'?'warn':'ok'}">${o.status==='aberto'?'Aberto':'Convertido'}</span></td>
+      <td class="row-actions">
+        <button class="mini-btn" onclick="imprimirOrcamento('${o.id}')">Imprimir</button>
+        ${o.status==='aberto'?`<button class="mini-btn" onclick="orcamentoParaPedido('${o.id}')">Virar pedido</button><button class="mini-btn" onclick="orcamentoParaPdv('${o.id}')">Levar ao PDV</button>`:''}
+      </td>
+    </tr>`).join('')||'<tr><td colspan="7" class="empty">Nenhum orçamento registrado.</td></tr>';
+}
+el('orcBusca').addEventListener('input',renderOrcamentos);
+
+window.orcamentoParaPedido=id=>{
+  const o=state.orcamentos.find(x=>x.id===id);if(!o||o.status!=='aberto')return;
+  const pedido={
+    id:uid(),numero:String(state.pedidos.length+1).padStart(5,'0'),data:todayISO(),
+    clienteId:o.clienteId,itens:structuredClone(o.itens),desconto:o.desconto,total:o.total,
+    status:'aberto',origem:'Orçamento #'+o.numero,orcamentoId:o.id
+  };
+  state.pedidos.push(pedido);o.status='convertido';o.pedidoId=pedido.id;o.convertidoEm=todayISO();save();
+};
+window.orcamentoParaPdv=id=>{
+  const o=state.orcamentos.find(x=>x.id===id);if(!o)return;
+  const falta=o.itens.find(i=>Number(state.produtos.find(p=>p.id===i.produtoId)?.estoque||0)<Number(i.qtd||0));
+  if(falta)return alert(`Estoque insuficiente para ${falta.nome}.`);
+  state.carrinho=o.itens.map(i=>({produtoId:i.produtoId,qtd:i.qtd}));
+  state._orcamentoEmVenda=o.id;state.pdvCliente=o.clienteId;
+  navigate('pdv');el('vendaCliente').value=o.clienteId;el('cartDesconto').value=o.desconto||0;renderPdv();
+};
+
+function renderPedidos(){
+  const q=(el('pedBusca')?.value||'').toLowerCase();
+  const abertos=state.pedidos.filter(p=>p.status==='aberto');
+  el('pedAbertos').textContent=abertos.length;
+  el('pedValor').textContent=money(abertos.reduce((a,p)=>a+Number(p.total||0),0));
+  el('pedConcluidos').textContent=state.pedidos.filter(p=>p.status==='concluido').length;
+  el('pedidosTbody').innerHTML=state.pedidos.slice().reverse().filter(p=>
+    [p.numero,clienteNome(p.clienteId),p.origem].join(' ').toLowerCase().includes(q)
+  ).map(p=>`
+    <tr>
+      <td>#${esc(p.numero)}</td>
+      <td>${new Date(p.data).toLocaleDateString('pt-BR')}</td>
+      <td>${esc(clienteNome(p.clienteId))}</td>
+      <td>${money(p.total)}</td>
+      <td>${esc(p.origem||'Manual')}</td>
+      <td><span class="badge ${p.status==='concluido'?'ok':'warn'}">${p.status==='concluido'?'Concluído':'Aberto'}</span></td>
+      <td class="row-actions">
+        <button class="mini-btn" onclick="imprimirPedido('${p.id}')">Imprimir</button>
+        ${p.status==='aberto'?`<button class="mini-btn" onclick="pedidoParaPdv('${p.id}')">Faturar no PDV</button>`:''}
+      </td>
+    </tr>`).join('')||'<tr><td colspan="7" class="empty">Nenhum pedido registrado.</td></tr>';
+}
+el('pedBusca').addEventListener('input',renderPedidos);
+
+window.pedidoParaPdv=id=>{
+  const p=state.pedidos.find(x=>x.id===id);if(!p||p.status!=='aberto')return;
+  const falta=p.itens.find(i=>Number(state.produtos.find(x=>x.id===i.produtoId)?.estoque||0)<Number(i.qtd||0));
+  if(falta)return alert(`Estoque insuficiente para ${falta.nome}.`);
+  state.carrinho=p.itens.map(i=>({produtoId:i.produtoId,qtd:i.qtd}));
+  state._pedidoEmFaturamento=p.id;state.pdvCliente=p.clienteId;
+  navigate('pdv');el('vendaCliente').value=p.clienteId;el('cartDesconto').value=p.desconto||0;renderPdv();
+};
+
+function documentoHtml(tipo,obj){
+  const empresa=esc(state.config.empresa||'DW ERP');
+  const cnpj=esc(state.config.cnpj||'');
+  const cli=esc(clienteNome(obj.clienteId));
+  const itens=(obj.itens||[]).map(i=>{
+    const p=state.produtos.find(x=>x.id===i.produtoId);
+    const nome=esc(i.nome||p?.nome||'Produto');
+    const preco=itemUnitPrice(i),qtd=Number(i.qtd||0);
+    return `<tr><td>${nome}</td><td>${qtd}</td><td>${money(preco)}</td><td>${money(preco*qtd)}</td></tr>`;
+  }).join('');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tipo}</title>
+  <style>body{font-family:Arial,sans-serif;color:#111;padding:28px;max-width:850px;margin:auto}h1{margin:0}.muted{color:#666}.head{display:flex;justify-content:space-between;border-bottom:2px solid #f97316;padding-bottom:16px;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}.tot{font-size:20px;font-weight:bold;text-align:right;margin-top:20px}.foot{margin-top:40px;border-top:1px solid #ddd;padding-top:12px;font-size:12px;color:#666}@media print{button{display:none}}</style></head><body>
+  <div class="head"><div><h1>${empresa}</h1><div class="muted">${cnpj}</div></div><div><strong>${tipo} #${esc(obj.numero)}</strong><div class="muted">${new Date(obj.data).toLocaleString('pt-BR')}</div></div></div>
+  <p><strong>Cliente:</strong> ${cli}</p>
+  ${obj.validade?`<p><strong>Validade:</strong> ${new Date(obj.validade+'T00:00:00').toLocaleDateString('pt-BR')}</p>`:''}
+  <table><thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${itens}</tbody></table>
+  ${Number(obj.desconto||0)>0?`<p class="tot">Desconto: ${money(obj.desconto)}</p>`:''}
+  <p class="tot">Total: ${money(obj.total)}</p>
+  <div class="foot">Documento gerado pelo DW ERP.</div>
+  <script>window.onload=()=>window.print()</script></body></html>`;
+}
+function abrirDocumento(html){
+  const w=window.open('','_blank','width=900,height=700');
+  if(!w)return alert('Permita pop-ups para imprimir.');
+  w.document.open();w.document.write(html);w.document.close();
+}
