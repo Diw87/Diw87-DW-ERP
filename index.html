@@ -69,6 +69,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 .danger-outline{color:var(--danger)!important;border-color:#fecaca!important}
 @media(max-width:760px){.scanner-row{grid-template-columns:1fr}.pdv-shortcuts{display:grid;grid-template-columns:1fr 1fr}}
 
+.barcode-field{font-size:18px;font-weight:800;letter-spacing:.5px}.field-help{display:block;margin-top:5px;color:var(--muted);font-size:11px}.field-help.ok{color:var(--success)}.field-help.warn{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -167,6 +168,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
       <section id="view-produtos" class="view">
         <div class="toolbar">
           <input id="produtoBusca" class="input grow" placeholder="Buscar por nome, SKU ou código de barras..." />
+          <button class="btn ghost" id="scanProdutoBtn">▥ Cadastrar pelo leitor</button>
           <button class="btn primary" id="novoProdutoBtn">+ Nova mercadoria</button>
         </div>
         <section class="panel table-panel">
@@ -558,7 +560,10 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
       <div class="form-grid">
         <label>Nome<input id="pNome" class="input full" required /></label>
         <label>SKU<input id="pSku" class="input full" required /></label>
-        <label>Código de barras<input id="pBarcode" class="input full" /></label>
+        <label>Código de barras
+          <input id="pBarcode" class="input full barcode-field" autocomplete="off" inputmode="numeric" placeholder="Passe o leitor aqui" />
+          <small class="field-help" id="barcodeHelp">Passe o leitor. O Enter do leitor verifica o código automaticamente.</small>
+        </label>
         <label>Categoria<input id="pCategoria" class="input full" /></label><label>Marca<input id="pMarca" class="input full" placeholder="Ex.: Nestlé, Coca-Cola..." /></label><label>Setor<input id="pSetor" class="input full" placeholder="Ex.: Mercearia, Hortifruti, Açougue..." /></label>
         <label>Custo<input id="pCusto" class="input full" type="number" min="0" step="0.01" required /></label>
         <label>Preço de venda<input id="pVenda" class="input full" type="number" min="0" step="0.01" required /></label>
@@ -719,12 +724,12 @@ function updateMarginPreview(){
   if(el('pLucroPreview'))el('pLucroPreview').value=money(venda-custo);
   if(el('pMargemPreview'))el('pMargemPreview').value=venda>0?(((venda-custo)/venda)*100).toFixed(1)+'%':'0,0%';
 }
-function openProduto(p=null){
+function openProduto(p=null,barcodeInicial=''){
   el('produtoModalTitle').textContent=p?'Editar mercadoria':'Nova mercadoria';
   el('produtoId').value=p?.id||'';
   el('pNome').value=p?.nome||'';
-  el('pSku').value=p?.sku||'';
-  el('pBarcode').value=p?.barcode||'';
+  el('pSku').value=p?.sku||barcodeInicial||'';
+  el('pBarcode').value=p?.barcode||barcodeInicial||'';
   el('pCategoria').value=p?.categoria||'';
   el('pMarca').value=p?.marca||'';
   el('pSetor').value=p?.setor||'';
@@ -739,11 +744,47 @@ function openProduto(p=null){
   el('pCst').value=p?.cst||'';
   el('pOrigem').value=p?.origem||'0';
   updateMarginPreview();
+  const help=el('barcodeHelp');
+  if(help){help.textContent='Passe o leitor. O Enter do leitor verifica o código automaticamente.';help.className='field-help'}
   el('produtoModal').showModal();
+  setTimeout(()=>{
+    if(p || barcodeInicial) el('pNome')?.focus();
+    else el('pBarcode')?.focus();
+  },30);
 }
 window.editProduto=id=>openProduto(state.produtos.find(p=>p.id===id));
 window.delProduto=id=>{if(confirm('Excluir esta mercadoria?')){state.produtos=state.produtos.filter(p=>p.id!==id);save()}};
 el('novoProdutoBtn').onclick=()=>openProduto();
+el('scanProdutoBtn').onclick=()=>{
+  openProduto();
+  setTimeout(()=>{el('pBarcode')?.focus();el('pBarcode')?.select()},30);
+};
+function verificarCodigoCadastro(){
+  const codigo=el('pBarcode').value.trim();
+  const help=el('barcodeHelp');
+  if(!codigo){
+    if(help){help.textContent='Leia ou digite um código de barras.';help.className='field-help warn'}
+    return false;
+  }
+  const atualId=el('produtoId').value;
+  const existente=state.produtos.find(p=>String(p.barcode||'').trim()===codigo && p.id!==atualId);
+  if(existente){
+    if(help){help.textContent='Código já cadastrado em: '+existente.nome;help.className='field-help warn'}
+    el('produtoModal').close();
+    setTimeout(()=>openProduto(existente),60);
+    return true;
+  }
+  if(!el('pSku').value.trim())el('pSku').value=codigo;
+  if(help){help.textContent='Código disponível para novo cadastro.';help.className='field-help ok'}
+  setTimeout(()=>el('pNome')?.focus(),20);
+  return false;
+}
+el('pBarcode').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  e.preventDefault();
+  verificarCodigoCadastro();
+});
+
 el('salvarProdutoBtn').onclick=()=>{
   const data={
     id:el('produtoId').value||uid(),nome:el('pNome').value.trim(),sku:el('pSku').value.trim(),
@@ -752,6 +793,10 @@ el('salvarProdutoBtn').onclick=()=>{
     estoque:Number(el('pEstoque').value),minimo:Number(el('pMinimo').value),unidade:el('pUnidade').value,ncm:el('pNcm').value.trim(),cest:el('pCest').value.trim(),cfop:el('pCfop').value.trim(),cst:el('pCst').value.trim(),origem:el('pOrigem').value
   };
   if(!data.nome||!data.sku||Number.isNaN(data.venda)) return alert('Preencha os campos obrigatórios.');
+  if(data.barcode){
+    const duplicado=state.produtos.find(p=>String(p.barcode||'').trim()===data.barcode && p.id!==data.id);
+    if(duplicado)return alert('Este código de barras já está cadastrado em: '+duplicado.nome);
+  }
   const idx=state.produtos.findIndex(p=>p.id===data.id);
   if(idx>=0) state.produtos[idx]=data; else state.produtos.push(data);
   el('produtoModal').close(); save();
@@ -855,12 +900,20 @@ el('valorRecebido').addEventListener('input',renderTroco);
 
 el('pdvBusca').addEventListener('keydown',e=>{
   if(e.key!=='Enter')return;
+  e.preventDefault();
   const q=el('pdvBusca').value.trim();
-  const p=state.produtos.find(p=>p.barcode===q || p.sku===q);
+  if(!q)return;
+  const p=state.produtos.find(p=>String(p.barcode||'')===q || String(p.sku||'')===q);
   if(p){
     addCart(p.id);
     el('pdvBusca').value='';
     renderPdv();
+    return;
+  }
+  if(confirm('Código '+q+' não cadastrado. Deseja cadastrar esta mercadoria agora?')){
+    el('pdvBusca').value='';
+    navigate('produtos');
+    setTimeout(()=>openProduto(null,q),50);
   }
 });
 
