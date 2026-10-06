@@ -998,3 +998,261 @@ function abrirDocumento(html){
   if(!w)return alert('Permita pop-ups para imprimir.');
   w.document.open();w.document.write(html);w.document.close();
 }
+window.imprimirOrcamento=id=>{const o=state.orcamentos.find(x=>x.id===id);if(o)abrirDocumento(documentoHtml('ORÇAMENTO',o))};
+window.imprimirPedido=id=>{const p=state.pedidos.find(x=>x.id===id);if(p)abrirDocumento(documentoHtml('PEDIDO',p))};
+window.imprimirComprovante=id=>{
+  const v=state.vendas.find(x=>x.id===id);if(!v)return;
+  abrirDocumento(documentoHtml('COMPROVANTE DE VENDA',v));
+};
+
+function renderFornecedores(){
+  const fornecedores=state.fornecedores||[];
+  el('fornecedoresTbody').innerHTML=fornecedores.map(f=>{
+    const total=(state.compras||[]).filter(c=>c.fornecedorId===f.id).reduce((a,c)=>a+Number(c.total||0),0);
+    return `<tr><td>${esc(f.nome)}</td><td>${esc(f.doc||'-')}</td><td>${esc(f.telefone||'-')}</td><td>${money(total)}</td><td><button class="mini-btn" onclick="delFornecedor('${f.id}')">Excluir</button></td></tr>`;
+  }).join('')||'<tr><td colspan="5" class="empty">Nenhum fornecedor cadastrado.</td></tr>';
+}
+el('addFornecedorBtn').onclick=()=>{
+  const nome=el('fornNome').value.trim(); if(!nome)return alert('Informe o nome do fornecedor.');
+  state.fornecedores=state.fornecedores||[];
+  state.fornecedores.push({id:uid(),nome,doc:el('fornDoc').value.trim(),telefone:el('fornTelefone').value.trim()});
+  el('fornNome').value=el('fornDoc').value=el('fornTelefone').value='';
+  save();
+};
+window.delFornecedor=id=>{
+  if((state.compras||[]).some(c=>c.fornecedorId===id)) return alert('Este fornecedor possui compras registradas e não pode ser excluído.');
+  if(confirm('Excluir fornecedor?')){state.fornecedores=state.fornecedores.filter(f=>f.id!==id);save()}
+};
+
+function renderCompras(){
+  state.compras=state.compras||[];
+  state.fornecedores=state.fornecedores||[];
+  el('compraFornecedor').innerHTML='<option value="">Selecione o fornecedor</option>'+state.fornecedores.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join('');
+  el('compraProduto').innerHTML='<option value="">Selecione a mercadoria</option>'+state.produtos.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+  el('comprasTbody').innerHTML=state.compras.slice().reverse().map(c=>{
+    const f=state.fornecedores.find(f=>f.id===c.fornecedorId);
+    const p=state.produtos.find(p=>p.id===c.produtoId);
+    return `<tr><td>${new Date(c.data).toLocaleString('pt-BR')}</td><td>${esc(f?.nome||'Fornecedor removido')}</td><td>${esc(p?.nome||'Produto removido')}</td><td>${c.qtd}</td><td>${money(c.custoUnit)}</td><td>${money(c.total)}</td><td><span class="badge ${c.status==='pago'?'ok':'warn'}">${c.status==='pago'?'Pago':'A pagar'}</span></td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">Nenhuma compra registrada.</td></tr>';
+}
+el('compraProduto').addEventListener('change',()=>{
+  const p=state.produtos.find(p=>p.id===el('compraProduto').value);
+  if(p) el('compraCusto').value=p.custo||0;
+});
+el('registrarCompraBtn').onclick=()=>{
+  const fornecedorId=el('compraFornecedor').value, produtoId=el('compraProduto').value;
+  const qtd=Number(el('compraQtd').value), custoUnit=Number(el('compraCusto').value), status=el('compraStatus').value;
+  if(!fornecedorId||!produtoId||!qtd||qtd<=0||Number.isNaN(custoUnit)) return alert('Preencha fornecedor, produto, quantidade e custo.');
+  const p=state.produtos.find(p=>p.id===produtoId); if(!p)return;
+  p.estoque=Number(p.estoque||0)+qtd;
+  p.custo=custoUnit;
+  const total=qtd*custoUnit;
+  const compra={id:uid(),fornecedorId,produtoId,qtd,custoUnit,total,status,data:todayISO()};
+  state.compras=state.compras||[];
+  state.compras.push(compra);
+  state.movimentos.push({id:uid(),produtoId,tipo:'entrada',qtd,obs:'Compra de fornecedor',data:todayISO()});
+  state.financeiro.push({id:uid(),tipo:'despesa',descricao:`Compra - ${p.nome}`,valor:total,status:status==='pago'?'pago':'aberto',data:todayISO()});
+  if(status==='aberto') state.contas.push({id:uid(),tipo:'despesa',descricao:`Compra - ${p.nome}`,valor:total,vencimento:new Date().toISOString().slice(0,10),status:'aberto',origem:'compra',data:todayISO()});
+  el('compraQtd').value=''; el('compraCusto').value='';
+  save();
+};
+
+function renderVendas(){
+  const q=(el('vendasBusca')?.value||'').toLowerCase();
+  const rows=state.vendas.slice().reverse().filter(v=>{
+    const c=state.clientes.find(c=>c.id===v.clienteId);
+    return [v.numero,c?.nome,v.pagamento].join(' ').toLowerCase().includes(q);
+  }).map(v=>{
+    const c=state.clientes.find(c=>c.id===v.clienteId);
+    const itens=v.itens.map(i=>{
+      const p=state.produtos.find(p=>p.id===i.produtoId);
+      return `${i.nome||p?.nome||'Produto'} x${i.qtd}`;
+    }).join(', ');
+    const vend=state.vendedores.find(x=>x.id===v.vendedorId);
+    return `<tr><td>#${esc(v.numero)}</td><td>${new Date(v.data).toLocaleString('pt-BR')}</td><td>${esc(c?.nome||'Consumidor')}</td><td>${esc(vend?.nome||'-')}</td><td>${esc(v.pagamento)}</td><td>${Number(v.parcelas||1)}x</td><td>${money(v.total)}</td><td>${money(v.comissaoValor||0)}</td><td><span class="badge ${v.status==='pago'?'ok':'warn'}">${v.status==='pago'?'Pago':'Pendente'}</span></td><td>${esc(itens)}</td><td><button class="mini-btn" onclick="imprimirComprovante('${v.id}')">Comprovante</button></td></tr>`;
+  }).join('');
+  el('vendasTbody').innerHTML=rows||'<tr><td colspan="11" class="empty">Nenhuma venda encontrada.</td></tr>';
+}
+el('vendasBusca').addEventListener('input',renderVendas);
+el('imprimirVendasBtn').onclick=()=>window.print();
+
+function renderFinanceiro(){
+  const receitas=state.financeiro.filter(f=>f.tipo==='receita'&&f.status==='pago').reduce((a,f)=>a+Number(f.valor),0);
+  const despesas=state.financeiro.filter(f=>f.tipo==='despesa'&&f.status==='pago').reduce((a,f)=>a+Number(f.valor),0);
+  el('fReceitas').textContent=money(receitas);el('fDespesas').textContent=money(despesas);el('fSaldo').textContent=money(receitas-despesas);
+  el('financeiroTbody').innerHTML=state.financeiro.slice().reverse().map(f=>`
+    <tr><td>${new Date(f.data).toLocaleString('pt-BR')}</td><td>${esc(f.tipo)}</td><td>${esc(f.descricao)}</td><td>${money(f.valor)}</td><td><span class="badge ${f.status==='pago'?'ok':'warn'}">${esc(f.status)}</span></td><td><button class="mini-btn" onclick="delFin('${f.id}')">Excluir</button></td></tr>
+  `).join('')||'<tr><td colspan="6" class="empty">Nenhum lançamento.</td></tr>';
+}
+el('addFinanceiroBtn').onclick=()=>{
+  const descricao=el('finDescricao').value.trim(),valor=Number(el('finValor').value);if(!descricao||!valor)return alert('Informe descrição e valor.');
+  state.financeiro.push({id:uid(),tipo:el('finTipo').value,descricao,valor,status:el('finStatus').value,data:todayISO()});
+  el('finDescricao').value='';el('finValor').value='';save();
+};
+window.delFin=id=>{if(confirm('Excluir lançamento?')){state.financeiro=state.financeiro.filter(f=>f.id!==id);save()}};
+
+
+function renderVendedores(){
+  const vendasCom=state.vendas.filter(v=>v.vendedorId);
+  el('vendAtivos').textContent=state.vendedores.length;
+  el('vendComissoes').textContent=money(vendasCom.filter(v=>v.status==='pago').reduce((a,v)=>a+Number(v.comissaoValor||0),0));
+  el('vendVendas').textContent=vendasCom.length;
+  el('vendedoresTbody').innerHTML=state.vendedores.map(v=>{const vendas=state.vendas.filter(x=>x.vendedorId===v.id&&x.status==='pago');const total=vendas.reduce((a,x)=>a+Number(x.total||0),0);const com=vendas.reduce((a,x)=>a+Number(x.comissaoValor||0),0);return `<tr><td>${esc(v.nome)}</td><td>${Number(v.comissaoPct||0).toFixed(1)}%</td><td>${vendas.length}</td><td>${money(total)}</td><td>${money(com)}</td><td><button class="mini-btn" onclick="delVendedor('${v.id}')">Excluir</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="empty">Nenhum vendedor cadastrado.</td></tr>';
+}
+el('addVendedorBtn').onclick=()=>{const nome=el('vendNome').value.trim(),comissaoPct=Number(el('vendComissaoPct').value||0);if(!nome)return alert('Informe o nome do vendedor.');state.vendedores.push({id:uid(),nome,comissaoPct});el('vendNome').value='';el('vendComissaoPct').value='';save();};
+window.delVendedor=id=>{if(state.vendas.some(v=>v.vendedorId===id))return alert('Esse vendedor possui vendas vinculadas e não pode ser excluído.');if(confirm('Excluir vendedor?')){state.vendedores=state.vendedores.filter(v=>v.id!==id);save()}};
+
+function fiscalProdutoOk(p){return Boolean(p.ncm&&p.cfop&&p.cst&&p.unidade)}
+function renderFiscal(){
+  const ok=state.produtos.filter(fiscalProdutoOk);
+  el('fisProdutosOk').textContent=ok.length;el('fisProdutosPend').textContent=state.produtos.length-ok.length;el('fisAmbienteCard').textContent=state.fiscalConfig.ambiente==='producao'?'Produção':'Homologação';
+  el('fisRazao').value=state.fiscalConfig.razao||'';el('fisIE').value=state.fiscalConfig.ie||'';el('fisCRT').value=state.fiscalConfig.crt||'';el('fisAmbiente').value=state.fiscalConfig.ambiente||'homologacao';
+  el('fiscalProdutosTbody').innerHTML=state.produtos.map(p=>`<tr><td>${esc(p.nome)}</td><td>${esc(p.ncm||'-')}</td><td>${esc(p.cfop||'-')}</td><td>${esc(p.cst||'-')}</td><td>${esc(p.cest||'-')}</td><td>${esc(p.unidade||'-')}</td><td><span class="badge ${fiscalProdutoOk(p)?'ok':'warn'}">${fiscalProdutoOk(p)?'Pronto':'Pendente'}</span></td></tr>`).join('')||'<tr><td colspan="7" class="empty">Nenhum produto cadastrado.</td></tr>';
+}
+el('salvarFiscalBtn').onclick=()=>{state.fiscalConfig={razao:el('fisRazao').value.trim(),ie:el('fisIE').value.trim(),crt:el('fisCRT').value,ambiente:el('fisAmbiente').value};save();alert('Dados fiscais salvos. A emissão real continua desativada.');};
+
+function caixaMovimentosDesdeAbertura(){
+  if(!state.caixaAtual)return {entradas:0,saidas:0,formas:{}};
+  const inicio=new Date(state.caixaAtual.abertura).getTime();
+  let entradas=0,saidas=0,formas={};
+  state.vendas.filter(v=>v.status==='pago'&&new Date(v.data).getTime()>=inicio).forEach(v=>{
+    entradas+=Number(v.total||0);
+    formas[v.pagamento]=(formas[v.pagamento]||0)+Number(v.total||0);
+  });
+  state.financeiro.filter(f=>f.status==='pago'&&new Date(f.data).getTime()>=inicio).forEach(f=>{
+    const isVenda=String(f.descricao||'').startsWith('Venda #');
+    if(isVenda)return;
+    if(f.tipo==='receita')entradas+=Number(f.valor||0);
+    if(f.tipo==='despesa')saidas+=Number(f.valor||0);
+  });
+  return {entradas,saidas,formas};
+}
+
+function renderCaixa(){
+  state.caixas=state.caixas||[];
+  const aberto=!!state.caixaAtual;
+  el('caixaFechadoBox').style.display=aberto?'none':'block';
+  el('caixaAbertoBox').style.display=aberto?'block':'none';
+  el('cxStatus').textContent=aberto?'Aberto':'Fechado';
+
+  if(aberto){
+    const mov=caixaMovimentosDesdeAbertura();
+    const saldo=Number(state.caixaAtual.valorInicial||0)+mov.entradas-mov.saidas;
+    el('cxAberturaInfo').textContent='Aberto em '+new Date(state.caixaAtual.abertura).toLocaleString('pt-BR');
+    el('cxEntradas').textContent=money(mov.entradas);
+    el('cxSaldo').textContent=money(saldo);
+    const formas=Object.entries(mov.formas).map(([k,v])=>`<div class="list-row"><strong>${esc(k)}</strong><span>${money(v)}</span></div>`).join('');
+    el('caixaFormas').innerHTML=formas||'<div class="empty">Nenhuma venda desde a abertura.</div>';
+  }else{
+    el('cxAberturaInfo').textContent='Nenhuma abertura ativa';
+    el('cxEntradas').textContent=money(0);
+    el('cxSaldo').textContent=money(0);
+    el('caixaFormas').innerHTML='<div class="empty">Abra o caixa para acompanhar o movimento.</div>';
+  }
+
+  el('caixaHistoricoTbody').innerHTML=state.caixas.slice().reverse().map(c=>`
+    <tr>
+      <td>${new Date(c.abertura).toLocaleString('pt-BR')}</td>
+      <td>${c.fechamento?new Date(c.fechamento).toLocaleString('pt-BR'):'-'}</td>
+      <td>${money(c.valorInicial)}</td>
+      <td>${money(c.saldoEsperado)}</td>
+      <td>${c.valorContado==null?'-':money(c.valorContado)}</td>
+      <td>${c.diferenca==null?'-':money(c.diferenca)}</td>
+      <td><span class="badge ${c.status==='fechado'?'ok':'warn'}">${c.status==='fechado'?'Fechado':'Aberto'}</span></td>
+    </tr>`).join('')||'<tr><td colspan="7" class="empty">Nenhum caixa registrado.</td></tr>';
+}
+el('abrirCaixaBtn').onclick=()=>{
+  if(state.caixaAtual)return alert('Já existe um caixa aberto.');
+  const valorInicial=Number(el('cxValorInicial').value||0);
+  const caixa={id:uid(),abertura:todayISO(),fechamento:null,valorInicial,valorContado:null,saldoEsperado:null,diferenca:null,status:'aberto',obsAbertura:el('cxObsAbertura').value.trim(),obsFechamento:''};
+  state.caixaAtual=caixa;
+  state.caixas.push(caixa);
+  el('cxValorInicial').value='';el('cxObsAbertura').value='';
+  save();
+};
+el('fecharCaixaBtn').onclick=()=>{
+  if(!state.caixaAtual)return alert('Não há caixa aberto.');
+  const mov=caixaMovimentosDesdeAbertura();
+  const esperado=Number(state.caixaAtual.valorInicial||0)+mov.entradas-mov.saidas;
+  const contado=Number(el('cxValorContado').value);
+  if(!Number.isFinite(contado))return alert('Informe o valor contado.');
+  state.caixaAtual.saldoEsperado=esperado;
+  state.caixaAtual.valorContado=contado;
+  state.caixaAtual.diferenca=contado-esperado;
+  state.caixaAtual.fechamento=todayISO();
+  state.caixaAtual.status='fechado';
+  state.caixaAtual.obsFechamento=el('cxObsFechamento').value.trim();
+  state.caixaAtual=null;
+  el('cxValorContado').value='';el('cxObsFechamento').value='';
+  save();
+};
+
+function renderContas(){
+  state.contas=state.contas||[];
+state.orcamentos=state.orcamentos||[];
+state.pedidos=state.pedidos||[];
+state.vendedores=state.vendedores||[];
+state.fiscalConfig=state.fiscalConfig||{razao:'',ie:'',crt:'',ambiente:'homologacao'};
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const abertas=state.contas.filter(c=>c.status==='aberto');
+  const receber=abertas.filter(c=>c.tipo==='receita').reduce((a,c)=>a+Number(c.valor||0),0);
+  const pagar=abertas.filter(c=>c.tipo==='despesa').reduce((a,c)=>a+Number(c.valor||0),0);
+  const vencidas=abertas.filter(c=>c.vencimento && new Date(c.vencimento+'T00:00:00')<hoje).length;
+  el('ctReceber').textContent=money(receber);
+  el('ctPagar').textContent=money(pagar);
+  el('ctVencidas').textContent=vencidas;
+
+  el('contasTbody').innerHTML=state.contas.slice().sort((a,b)=>(a.vencimento||'').localeCompare(b.vencimento||'')).map(c=>{
+    const vencida=c.status==='aberto'&&c.vencimento&&new Date(c.vencimento+'T00:00:00')<hoje;
+    const statusLabel=c.status==='pago'?'Baixada':(vencida?'Vencida':'Em aberto');
+    const badge=c.status==='pago'?'ok':(vencida?'danger':'warn');
+    return `<tr>
+      <td>${c.tipo==='receita'?'A receber':'A pagar'}</td>
+      <td>${esc(c.descricao)}</td>
+      <td>${money(c.valor)}</td>
+      <td>${c.vencimento?new Date(c.vencimento+'T00:00:00').toLocaleDateString('pt-BR'):'-'}</td>
+      <td><span class="badge ${badge}">${statusLabel}</span></td>
+      <td>${c.status==='aberto'?`<button class="mini-btn" onclick="baixarConta('${c.id}')">Dar baixa</button>`:'-'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Nenhuma conta cadastrada.</td></tr>';
+}
+el('addContaBtn').onclick=()=>{
+  const descricao=el('contaDescricao').value.trim(),valor=Number(el('contaValor').value),vencimento=el('contaVencimento').value;
+  if(!descricao||!valor||!vencimento)return alert('Preencha descrição, valor e vencimento.');
+  state.contas.push({id:uid(),tipo:el('contaTipo').value,descricao,valor,vencimento,status:'aberto',origem:'manual',data:todayISO()});
+  el('contaDescricao').value='';el('contaValor').value='';el('contaVencimento').value='';
+  save();
+};
+window.baixarConta=id=>{
+  const c=state.contas.find(c=>c.id===id); if(!c)return;
+  if(!confirm(`Dar baixa em "${c.descricao}" no valor de ${money(c.valor)}?`))return;
+  c.status='pago'; c.baixadoEm=todayISO();
+  state.financeiro.push({id:uid(),tipo:c.tipo,descricao:`Baixa - ${c.descricao}`,valor:c.valor,status:'pago',data:todayISO()});
+  save();
+};
+
+function renderConfig(){
+  el('cfgEmpresa').value=state.config.empresa||'';el('cfgCnpj').value=state.config.cnpj||'';el('cfgPix').value=state.config.pix||'';el('cfgPixProvider').value=state.config.pixProvider||'';
+}
+el('salvarConfig').onclick=()=>{
+  state.config={empresa:el('cfgEmpresa').value.trim(),cnpj:el('cfgCnpj').value.trim(),pix:el('cfgPix').value.trim(),pixProvider:el('cfgPixProvider').value};save();alert('Configurações salvas.');
+};
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dw-erp-backup.json';a.click();URL.revokeObjectURL(a.href);
+}
+el('exportBtn').onclick=exportData;el('exportConfigBtn').onclick=exportData;
+el('importInput').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{const data=JSON.parse(await file.text());state=data;save();alert('Backup importado com sucesso.')}catch(err){alert('Arquivo inválido.')}
+});
+
+function renderAll(){renderDashboard();renderProdutos();renderEstoque();renderPdv();renderOrcamentos();renderPedidos();renderClientes();renderFornecedores();renderCompras();renderVendas();renderFinanceiro();renderVendedores();renderFiscal();renderCaixa();renderContas();renderConfig();atualizarParcelas()}
+renderAll();
+
+if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+
+</script>
+</body>
+</html>
