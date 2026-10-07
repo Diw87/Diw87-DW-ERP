@@ -71,12 +71,12 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 
 .barcode-field{font-size:18px;font-weight:800;letter-spacing:.5px}.field-help{display:block;margin-top:5px;color:var(--muted);font-size:11px}.field-help.ok{color:var(--success)}.field-help.warn{color:var(--warn)}
 
-.phone-pair-box{padding:22px;text-align:center}.phone-pair-box canvas{display:block;max-width:260px;width:100%!important;height:auto!important;margin:0 auto 14px}.phone-pair-box>div>strong{display:block;margin:8px 0}.phone-pair-box p{color:var(--muted);font-size:13px}.pair-status{display:flex;align-items:center;justify-content:center;gap:6px;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+.phone-pair-box{padding:22px;text-align:center}.phone-pair-box #phonePairQr{display:flex;justify-content:center;align-items:center;min-height:260px;margin:0 auto 14px}.phone-pair-box #phonePairQr img,.phone-pair-box #phonePairQr canvas{display:block;max-width:260px;width:260px!important;height:260px!important}.pair-link{display:block;word-break:break-all;margin:8px 0 12px;color:var(--primary-dark);font-weight:700;font-size:13px}.phone-pair-box>div>strong{display:block;margin:8px 0}.phone-pair-box p{color:var(--muted);font-size:13px}.pair-status{display:flex;align-items:center;justify-content:center;gap:6px;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
 .mobile-scanner-screen{position:fixed;inset:0;background:#0f172a;color:#fff;z-index:9999;overflow:auto}.mobile-scanner-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:#111827}.mobile-scanner-head strong,.mobile-scanner-head small{display:block}.mobile-scanner-head small{color:#94a3b8;margin-top:2px}.mobile-scanner-main{padding:16px;max-width:560px;margin:auto}.camera-wrap{position:relative;background:#000;border-radius:18px;overflow:hidden;min-height:320px;display:grid;place-items:center}.camera-wrap video{width:100%;min-height:320px;object-fit:cover}.scan-frame{position:absolute;left:8%;right:8%;top:35%;height:30%;border:3px solid #f97316;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.18);pointer-events:none}.scanner-mobile-card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:14px;margin:14px 0;text-align:center}.scanner-mobile-card strong,.scanner-mobile-card span{display:block}.scanner-mobile-card span{color:#cbd5e1;margin-top:5px;font-size:13px}.scanner-big-btn{padding:15px;font-size:18px}.manual-scan{display:flex;gap:8px;margin-top:10px}.manual-scan .input{background:#fff;color:#111}.center{text-align:center;color:#94a3b8!important}
 @media(max-width:760px){.top-actions #phoneScannerBtn{display:none}.camera-wrap,.camera-wrap video{min-height:52vh}.mobile-scanner-main{padding:12px}}
 
 </style>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
 </head>
 <body>
@@ -566,7 +566,8 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
     <div class="phone-pair-box">
       <div id="phonePairLoading" class="empty">Criando sessão segura...</div>
       <div id="phonePairReady" style="display:none">
-        <canvas id="phonePairQr"></canvas>
+        <div id="phonePairQr" aria-label="QR Code de pareamento"></div>
+        <a id="phonePairLink" class="pair-link" href="#" target="_blank" rel="noopener">Abrir leitor no celular</a>
         <strong>Escaneie este QR com a câmera do celular</strong>
         <p>O celular abrirá o DW ERP em modo leitor e ficará pareado com este caixa.</p>
         <div class="pair-status"><span class="status-dot"></span><span id="phonePairStatus">Aguardando leitura no celular</span></div>
@@ -1043,6 +1044,11 @@ async function startPhonePairing(){
   if(phoneScannerSession){
     el('phonePairLoading').style.display='none';
     el('phonePairReady').style.display='block';
+    if(el('phonePairLink'))el('phonePairLink').href=phoneScannerSession.link;
+    const qrBox=el('phonePairQr');
+    if(qrBox && !qrBox.children.length && typeof window.QRCode==='function'){
+      new QRCode(qrBox,{text:phoneScannerSession.link,width:260,height:260,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    }
     return;
   }
   el('phonePairLoading').style.display='block';
@@ -1054,8 +1060,22 @@ async function startPhonePairing(){
     el('phonePairLoading').style.display='none';
     el('phonePairReady').style.display='block';
     el('phonePairStatus').textContent='Aguardando leitura no celular';
-    if(window.QRCode?.toCanvas){
-      await QRCode.toCanvas(el('phonePairQr'),link,{width:260,margin:2,errorCorrectionLevel:'M'});
+    const qrBox=el('phonePairQr');
+    const pairLink=el('phonePairLink');
+    if(pairLink)pairLink.href=link;
+    if(qrBox)qrBox.innerHTML='';
+    if(typeof window.QRCode==='function'){
+      new QRCode(qrBox,{
+        text:link,
+        width:260,
+        height:260,
+        colorDark:'#000000',
+        colorLight:'#ffffff',
+        correctLevel:QRCode.CorrectLevel.M
+      });
+    }else{
+      qrBox.innerHTML='<div class="empty">QR indisponível. Use o link abaixo.</div>';
+      el('phonePairError').textContent='A biblioteca do QR não carregou, mas o link do leitor está disponível.';
     }
     el('phoneScannerBtn').textContent='📱 Leitor celular • pareado';
     clearTimeout(phoneScannerPollTimer);
