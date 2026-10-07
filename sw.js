@@ -1,4 +1,4 @@
-const CACHE='dw-erp-v231';
+const CACHE='dw-erp-v240';
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['./'])).catch(()=>{}));
