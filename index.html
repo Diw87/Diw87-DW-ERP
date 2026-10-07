@@ -80,6 +80,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 
 .xml-import-panel{margin-bottom:16px}.xml-import-panel .panel-head small{display:block;color:var(--muted);font-weight:400;margin-top:3px}.xml-import-controls{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 16px}.xml-import-summary{margin:0 18px 14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}.xml-import-summary strong{color:var(--primary-dark)}.xml-preview-wrap{max-height:420px;overflow:auto}.xml-new{color:#0369a1;font-weight:700}.xml-existing{color:#15803d;font-weight:700}.xml-duplicate{color:#b91c1c;font-weight:700}
 @media(max-width:760px){.xml-import-controls{display:grid;grid-template-columns:1fr}.xml-import-controls .btn,.xml-import-controls .input{width:100%}}
+.promo-tag{display:inline-block;margin-top:4px;font-size:10px;font-weight:800;color:#b91c1c}.inv-count{min-width:110px}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
@@ -89,13 +90,15 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-mark">DW</div>
-        <div><strong>DW ERP</strong><small>Supermercado V2.1</small></div>
+        <div><strong>DW ERP</strong><small>Supermercado V2.2</small></div>
       </div>
 
       <nav id="nav">
         <button class="nav-item active" data-view="dashboard">🏠 <span>Dashboard</span></button>
         <button class="nav-item" data-view="produtos">📦 <span>Mercadorias</span></button>
         <button class="nav-item" data-view="estoque">🏷️ <span>Estoque</span></button>
+        <button class="nav-item" data-view="validade">⏳ <span>Validade & Perdas</span></button>
+        <button class="nav-item" data-view="inventario">📋 <span>Inventário</span></button>
         <button class="nav-item" data-view="pdv">🛒 <span>PDV / Vendas</span></button>
         <button class="nav-item" data-view="orcamentos">📝 <span>Orçamentos</span></button>
         <button class="nav-item" data-view="pedidos">📋 <span>Pedidos</span></button>
@@ -187,7 +190,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
         <section class="panel table-panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>SKU</th><th>Mercadoria</th><th>Categoria</th><th>Marca</th><th>Setor</th><th>NCM</th><th>Custo</th><th>Venda</th><th>Lucro un.</th><th>Margem</th><th>Estoque</th><th>Fiscal</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>SKU</th><th>Mercadoria</th><th>Categoria</th><th>Marca</th><th>Setor</th><th>NCM</th><th>Custo</th><th>Venda</th><th>Promo</th><th>Atacado</th><th>Estoque</th><th>Fiscal</th><th>Status</th><th></th></tr></thead>
               <tbody id="produtosTbody"></tbody>
             </table>
           </div>
@@ -212,6 +215,84 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
             <table>
               <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Quantidade</th><th>Observação</th></tr></thead>
               <tbody id="estoqueTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-validade" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Vencidos</span><strong id="valVencidos">0</strong><small>Lotes ainda com quantidade</small></article>
+          <article class="metric-card"><span>Vencem em 30 dias</span><strong id="val30Dias">0</strong><small>Atenção para reposição/promoção</small></article>
+          <article class="metric-card"><span>Perdas acumuladas</span><strong id="valPerdas">R$ 0,00</strong><small>Com base no custo registrado</small></article>
+        </div>
+
+        <section class="panel" style="margin-bottom:16px">
+          <div class="panel-head"><h2>Registrar lote / validade</h2></div>
+          <div class="toolbar">
+            <select id="loteProduto" class="input grow"></select>
+            <input id="loteNumero" class="input" placeholder="Lote" />
+            <input id="loteValidade" class="input" type="date" />
+            <input id="loteQtd" class="input" type="number" min="0" step="0.001" placeholder="Qtd. do lote" />
+            <button class="btn primary" id="addLoteBtn">Registrar lote</button>
+          </div>
+          <p class="helper" style="padding:0 18px 14px">Registrar lote não altera o estoque; apenas vincula quantidade e validade ao produto já existente.</p>
+        </section>
+
+        <section class="panel" style="margin-bottom:16px">
+          <div class="panel-head"><h2>Registrar perda / quebra</h2></div>
+          <div class="toolbar">
+            <select id="perdaProduto" class="input grow"></select>
+            <select id="perdaMotivo" class="input">
+              <option value="vencimento">Vencimento</option>
+              <option value="avaria">Avaria</option>
+              <option value="quebra">Quebra</option>
+              <option value="furto">Furto</option>
+              <option value="consumo">Consumo interno</option>
+              <option value="outro">Outro</option>
+            </select>
+            <input id="perdaQtd" class="input" type="number" min="0.001" step="0.001" placeholder="Quantidade" />
+            <input id="perdaObs" class="input grow" placeholder="Observação" />
+            <button class="btn primary" id="registrarPerdaBtn">Baixar perda</button>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-head"><h2>Lotes e validade</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Produto</th><th>Lote</th><th>Validade</th><th>Qtd.</th><th>Situação</th><th></th></tr></thead>
+              <tbody id="lotesTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-inventario" class="view">
+        <div class="cards-grid three">
+          <article class="metric-card"><span>Produtos</span><strong id="invProdutos">0</strong><small>Itens cadastrados</small></article>
+          <article class="metric-card"><span>Contados</span><strong id="invContados">0</strong><small>Nesta contagem</small></article>
+          <article class="metric-card"><span>Divergências</span><strong id="invDivergencias">0</strong><small>Diferenças encontradas</small></article>
+        </div>
+        <div class="toolbar">
+          <input id="invBusca" class="input grow" placeholder="Buscar por nome, SKU ou código de barras..." />
+          <button class="btn ghost" id="limparInventarioBtn">Limpar contagem</button>
+          <button class="btn primary" id="aplicarInventarioBtn">Aplicar inventário</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Produto</th><th>Código</th><th>Estoque sistema</th><th>Contagem física</th><th>Diferença</th></tr></thead>
+              <tbody id="inventarioTbody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="panel table-panel" style="margin-top:16px">
+          <div class="panel-head"><h2>Histórico de inventários</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Data</th><th>Produtos contados</th><th>Divergências</th><th>Ajuste líquido</th></tr></thead>
+              <tbody id="inventarioHistoricoTbody"></tbody>
             </table>
           </div>
         </section>
@@ -656,6 +737,11 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
         <label>Categoria<input id="pCategoria" class="input full" /></label><label>Marca<input id="pMarca" class="input full" placeholder="Ex.: Nestlé, Coca-Cola..." /></label><label>Setor<input id="pSetor" class="input full" placeholder="Ex.: Mercearia, Hortifruti, Açougue..." /></label>
         <label>Custo<input id="pCusto" class="input full" type="number" min="0" step="0.01" required /></label>
         <label>Preço de venda<input id="pVenda" class="input full" type="number" min="0" step="0.01" required /></label>
+        <label>Preço promocional<input id="pPromoPreco" class="input full" type="number" min="0" step="0.01" placeholder="Opcional" /></label>
+        <label>Promoção inicia em<input id="pPromoInicio" class="input full" type="date" /></label>
+        <label>Promoção termina em<input id="pPromoFim" class="input full" type="date" /></label>
+        <label>Quantidade mínima atacado<input id="pAtacadoQtd" class="input full" type="number" min="0" step="0.001" placeholder="Ex.: 6" /></label>
+        <label>Preço atacado<input id="pAtacadoPreco" class="input full" type="number" min="0" step="0.01" placeholder="Ex.: 4,99" /></label>
         <label>Lucro unitário<input id="pLucroPreview" class="input full" readonly /></label>
         <label>Margem sobre venda<input id="pMargemPreview" class="input full" readonly /></label>
         <label>Estoque inicial<input id="pEstoque" class="input full" type="number" min="0" step="0.001" required /></label>
@@ -714,6 +800,10 @@ const defaultState={
   orcamentos:[],
   pedidos:[],
   xmlImportados:[],
+  lotes:[],
+  perdas:[],
+  inventarioDraft:{},
+  inventarios:[],
   vendedores:[],
   fiscalConfig:{razao:'',ie:'',crt:'',ambiente:'homologacao'},
   movimentos:[],
@@ -731,6 +821,10 @@ state.contas=state.contas||[];
 state.orcamentos=state.orcamentos||[];
 state.pedidos=state.pedidos||[];
 state.xmlImportados=state.xmlImportados||[];
+state.lotes=state.lotes||[];
+state.perdas=state.perdas||[];
+state.inventarioDraft=state.inventarioDraft||{};
+state.inventarios=state.inventarios||[];
 state.vendedores=state.vendedores||[];
 state.fiscalConfig=state.fiscalConfig||{razao:'',ie:'',crt:'',ambiente:'homologacao'};
 state.config=state.config||{};
@@ -815,6 +909,8 @@ const meta={
   dashboard:['Dashboard','Visão geral do supermercado'],
   produtos:['Mercadorias','Cadastro e preços dos produtos'],
   estoque:['Estoque','Entradas, saídas e inventário'],
+  validade:['Validade & Perdas','Lotes, vencimentos e baixas por perda'],
+  inventario:['Inventário','Contagem física e ajuste de estoque'],
   pdv:['PDV Supermercado','Caixa rápido com leitor, peso e troco'],
   orcamentos:['Orçamentos','Propostas comerciais sem baixa de estoque'],
   pedidos:['Pedidos','Pedidos aprovados aguardando faturamento'],
@@ -870,6 +966,24 @@ function renderDashboard(){
   `).join('')||'<div class="empty">Nenhum produto com estoque baixo.</div>';
 }
 
+function isoTodayLocal(){
+  const d=new Date();
+  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+}
+function promoAtiva(p,hoje=isoTodayLocal()){
+  if(!(Number(p?.promoPreco)>0))return false;
+  if(p.promoInicio && hoje<p.promoInicio)return false;
+  if(p.promoFim && hoje>p.promoFim)return false;
+  return true;
+}
+function precoProduto(p,qtd=1){
+  const normal=Number(p?.venda||0);
+  const candidatos=[{tipo:'normal',preco:normal}];
+  if(promoAtiva(p)&&Number(p.promoPreco)>0)candidatos.push({tipo:'promo',preco:Number(p.promoPreco)});
+  if(Number(p?.atacadoQtd)>0&&Number(qtd)>=Number(p.atacadoQtd)&&Number(p.atacadoPreco)>0)candidatos.push({tipo:'atacado',preco:Number(p.atacadoPreco)});
+  return candidatos.filter(x=>Number.isFinite(x.preco)&&x.preco>=0).sort((a,b)=>a.preco-b.preco)[0]||{tipo:'normal',preco:normal};
+}
+
 function renderProdutos(){
   const q=el('produtoBusca')?.value?.toLowerCase()||'';
   const rows=state.produtos.filter(p=>[p.nome,p.sku,p.barcode,p.marca,p.setor,p.categoria].join(' ').toLowerCase().includes(q)).map(p=>`
@@ -877,8 +991,8 @@ function renderProdutos(){
       <td>${esc(p.sku)}</td><td><strong>${esc(p.nome)}</strong><br><small>${esc(p.barcode||'')}</small></td><td>${esc(p.categoria||'-')}</td><td>${esc(p.marca||'-')}</td><td>${esc(p.setor||'-')}</td>
       <td>${esc(p.ncm||'-')}</td>
       <td>${money(p.custo)}</td><td>${money(p.venda)}</td>
-      <td>${money(Number(p.venda||0)-Number(p.custo||0))}</td>
-      <td>${Number(p.venda)>0?(((Number(p.venda)-Number(p.custo))/Number(p.venda))*100).toFixed(1)+'%':'0,0%'}</td>
+      <td>${promoAtiva(p)?'<span class="badge ok">'+money(p.promoPreco)+'</span>':'-'}</td>
+      <td>${Number(p.atacadoQtd)>0&&Number(p.atacadoPreco)>0?money(p.atacadoPreco)+' / '+Number(p.atacadoQtd).toLocaleString('pt-BR',{maximumFractionDigits:3})+'+':'-'}</td>
       <td>${p.estoque}</td>
       <td><span class="badge ${(p.ncm&&p.cfop&&p.cst&&p.unidade)?'ok':'warn'}">${(p.ncm&&p.cfop&&p.cst&&p.unidade)?'Pronto':'Pendente'}</span></td>
       <td><span class="badge ${Number(p.estoque)<=Number(p.minimo)?'danger':'ok'}">${Number(p.estoque)<=Number(p.minimo)?'Baixo':'Normal'}</span></td>
@@ -903,6 +1017,11 @@ function openProduto(p=null,barcodeInicial=''){
   el('pSetor').value=p?.setor||'';
   el('pCusto').value=p?.custo??'';
   el('pVenda').value=p?.venda??'';
+  el('pPromoPreco').value=p?.promoPreco??'';
+  el('pPromoInicio').value=p?.promoInicio||'';
+  el('pPromoFim').value=p?.promoFim||'';
+  el('pAtacadoQtd').value=p?.atacadoQtd??'';
+  el('pAtacadoPreco').value=p?.atacadoPreco??'';
   el('pEstoque').value=p?.estoque??0;
   el('pMinimo').value=p?.minimo??2;
   el('pUnidade').value=p?.unidade||'UN';
@@ -1014,6 +1133,8 @@ el('salvarProdutoBtn').onclick=()=>{
     id:el('produtoId').value||uid(),nome:el('pNome').value.trim(),sku:el('pSku').value.trim(),
     barcode:el('pBarcode').value.trim(),categoria:el('pCategoria').value.trim(),marca:el('pMarca').value.trim(),setor:el('pSetor').value.trim(),
     custo:Number(el('pCusto').value),venda:Number(el('pVenda').value),
+    promoPreco:Number(el('pPromoPreco').value||0),promoInicio:el('pPromoInicio').value,promoFim:el('pPromoFim').value,
+    atacadoQtd:Number(el('pAtacadoQtd').value||0),atacadoPreco:Number(el('pAtacadoPreco').value||0),
     estoque:Number(el('pEstoque').value),minimo:Number(el('pMinimo').value),unidade:el('pUnidade').value,ncm:el('pNcm').value.trim(),cest:el('pCest').value.trim(),cfop:el('pCfop').value.trim(),cst:el('pCst').value.trim(),origem:el('pOrigem').value
   };
   if(!data.nome||!data.sku||Number.isNaN(data.venda)) return alert('Preencha os campos obrigatórios.');
@@ -1046,10 +1167,97 @@ el('movimentarBtn').onclick=()=>{
   el('estoqueQtd').value='';el('estoqueObs').value='';save();
 };
 
+function renderValidade(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const in30=new Date(now);in30.setDate(in30.getDate()+30);
+  const ativos=state.lotes.filter(l=>Number(l.qtd||0)>0);
+  const vencidos=ativos.filter(l=>l.validade&&new Date(l.validade+'T00:00:00')<now);
+  const prox=ativos.filter(l=>{if(!l.validade)return false;const d=new Date(l.validade+'T00:00:00');return d>=now&&d<=in30});
+  const perdasValor=state.perdas.reduce((a,x)=>a+Number(x.valorCusto||0),0);
+  el('valVencidos').textContent=vencidos.length;
+  el('val30Dias').textContent=prox.length;
+  el('valPerdas').textContent=money(perdasValor);
+  const opts='<option value="">Selecione a mercadoria</option>'+state.produtos.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+  el('loteProduto').innerHTML=opts;el('perdaProduto').innerHTML=opts;
+  el('lotesTbody').innerHTML=state.lotes.slice().sort((a,b)=>(a.validade||'9999').localeCompare(b.validade||'9999')).map(l=>{
+    const p=state.produtos.find(p=>p.id===l.produtoId);
+    let label='Sem validade',cls='warn';
+    if(l.validade){
+      const d=new Date(l.validade+'T00:00:00');
+      if(d<now){label='Vencido';cls='danger'}
+      else if(d<=in30){label='Vence em breve';cls='warn'}
+      else{label='Normal';cls='ok'}
+    }
+    return `<tr><td>${esc(p?.nome||'Produto removido')}</td><td>${esc(l.lote||'-')}</td><td>${l.validade?new Date(l.validade+'T00:00:00').toLocaleDateString('pt-BR'):'-'}</td><td>${Number(l.qtd||0).toLocaleString('pt-BR',{maximumFractionDigits:3})}</td><td><span class="badge ${cls}">${label}</span></td><td><button class="mini-btn" onclick="delLote('${l.id}')">Excluir</button></td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Nenhum lote registrado.</td></tr>';
+}
+el('addLoteBtn').onclick=()=>{
+  const produtoId=el('loteProduto').value,qtd=Number(el('loteQtd').value),validade=el('loteValidade').value,lote=el('loteNumero').value.trim();
+  const p=state.produtos.find(p=>p.id===produtoId);
+  if(!p||!Number.isFinite(qtd)||qtd<=0)return alert('Selecione o produto e informe a quantidade do lote.');
+  state.lotes.push({id:uid(),produtoId,lote,validade,qtd,data:todayISO()});
+  el('loteNumero').value='';el('loteValidade').value='';el('loteQtd').value='';save();
+};
+window.delLote=id=>{if(confirm('Excluir este registro de lote/validade?')){state.lotes=state.lotes.filter(l=>l.id!==id);save()}};
+function baixarQuantidadeDosLotes(produtoId,qtd){
+  let restante=Number(qtd||0);
+  const lotes=state.lotes.filter(l=>l.produtoId===produtoId&&Number(l.qtd||0)>0).sort((a,b)=>(a.validade||'9999').localeCompare(b.validade||'9999'));
+  for(const lote of lotes){
+    if(restante<=0)break;
+    const usar=Math.min(restante,Number(lote.qtd||0));
+    lote.qtd=Math.max(0,Number(lote.qtd||0)-usar);
+    restante-=usar;
+  }
+}
+el('registrarPerdaBtn').onclick=()=>{
+  const produtoId=el('perdaProduto').value,qtd=Number(el('perdaQtd').value),motivo=el('perdaMotivo').value,obs=el('perdaObs').value.trim();
+  const p=state.produtos.find(p=>p.id===produtoId);
+  if(!p||!Number.isFinite(qtd)||qtd<=0)return alert('Selecione o produto e informe a quantidade.');
+  if(qtd>Number(p.estoque||0))return alert('A perda não pode ser maior que o estoque disponível.');
+  p.estoque=Number(p.estoque||0)-qtd;
+  baixarQuantidadeDosLotes(produtoId,qtd);
+  const valorCusto=qtd*Number(p.custo||0);
+  state.perdas.push({id:uid(),produtoId,qtd,motivo,obs,valorCusto,data:todayISO()});
+  state.movimentos.push({id:uid(),produtoId,tipo:'perda',qtd,obs:(motivo+(obs?' - '+obs:'')),data:todayISO()});
+  el('perdaQtd').value='';el('perdaObs').value='';save();
+};
+
+function renderInventario(){
+  const q=(el('invBusca')?.value||'').toLowerCase();
+  const lista=state.produtos.filter(p=>[p.nome,p.sku,p.barcode].join(' ').toLowerCase().includes(q));
+  const contados=Object.keys(state.inventarioDraft).filter(id=>state.inventarioDraft[id]!==''&&state.inventarioDraft[id]!=null);
+  let diverg=0;
+  contados.forEach(id=>{const p=state.produtos.find(p=>p.id===id);if(p&&Number(state.inventarioDraft[id])!==Number(p.estoque||0))diverg++});
+  el('invProdutos').textContent=state.produtos.length;el('invContados').textContent=contados.length;el('invDivergencias').textContent=diverg;
+  el('inventarioTbody').innerHTML=lista.map(p=>{
+    const val=state.inventarioDraft[p.id]??'';
+    const diff=val===''?null:Number(val)-Number(p.estoque||0);
+    return `<tr><td>${esc(p.nome)}</td><td>${esc(p.barcode||p.sku)}</td><td>${Number(p.estoque||0).toLocaleString('pt-BR',{maximumFractionDigits:3})}</td><td><input class="input small inv-count" data-id="${p.id}" type="number" min="0" step="0.001" value="${esc(val)}" placeholder="Contagem" /></td><td>${diff==null?'-':(diff>0?'+':'')+diff.toLocaleString('pt-BR',{maximumFractionDigits:3})}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" class="empty">Nenhum produto encontrado.</td></tr>';
+  document.querySelectorAll('.inv-count').forEach(inp=>inp.addEventListener('change',e=>{state.inventarioDraft[e.target.dataset.id]=e.target.value;localStorage.setItem(KEY,JSON.stringify(state));renderInventario()}));
+  el('inventarioHistoricoTbody').innerHTML=state.inventarios.slice().reverse().map(i=>`<tr><td>${new Date(i.data).toLocaleString('pt-BR')}</td><td>${i.contados}</td><td>${i.divergencias}</td><td>${(i.ajusteLiquido>0?'+':'')+Number(i.ajusteLiquido||0).toLocaleString('pt-BR',{maximumFractionDigits:3})}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">Nenhum inventário aplicado.</td></tr>';
+}
+el('invBusca').addEventListener('input',renderInventario);
+el('limparInventarioBtn').onclick=()=>{if(confirm('Limpar toda a contagem atual?')){state.inventarioDraft={};save()}};
+el('aplicarInventarioBtn').onclick=()=>{
+  const entries=Object.entries(state.inventarioDraft).filter(([,v])=>v!==''&&v!=null&&Number.isFinite(Number(v)));
+  if(!entries.length)return alert('Informe pelo menos uma contagem física.');
+  let divergencias=0,ajusteLiquido=0;
+  for(const [id,val] of entries){
+    const p=state.produtos.find(p=>p.id===id);if(!p)continue;
+    const contado=Number(val),antes=Number(p.estoque||0),diff=contado-antes;
+    if(diff!==0){divergencias++;ajusteLiquido+=diff;state.movimentos.push({id:uid(),produtoId:id,tipo:'inventario',qtd:contado,obs:`Inventário: sistema ${antes} → físico ${contado} (dif. ${diff>0?'+':''}${diff})`,data:todayISO()})}
+    p.estoque=contado;
+  }
+  state.inventarios.push({id:uid(),data:todayISO(),contados:entries.length,divergencias,ajusteLiquido});
+  state.inventarioDraft={};save();
+  alert(`Inventário aplicado. ${entries.length} produtos contados e ${divergencias} divergência(s) ajustada(s).`);
+};
+
 function renderPdv(){
   const q=el('pdvBusca')?.value?.toLowerCase()||'';
   el('pdvProdutos').innerHTML=state.produtos.filter(p=>[p.nome,p.sku,p.barcode,p.marca,p.setor,p.categoria].join(' ').toLowerCase().includes(q)).map(p=>`
-    <div class="product-card" onclick="addCart('${p.id}')"><strong>${esc(p.nome)}</strong><small>${esc(p.marca||p.setor||p.sku)} · ${Number(p.estoque||0).toLocaleString('pt-BR',{maximumFractionDigits:3})} ${esc(p.unidade||'UN')}</small><span class="price">${money(p.venda)} / ${esc(p.unidade||'UN')}</span></div>
+    <div class="product-card" onclick="addCart('${p.id}')"><strong>${esc(p.nome)}</strong><small>${esc(p.marca||p.setor||p.sku)} · ${Number(p.estoque||0).toLocaleString('pt-BR',{maximumFractionDigits:3})} ${esc(p.unidade||'UN')}</small><span class="price">${money(precoProduto(p,1).preco)} / ${esc(p.unidade||'UN')}</span>${promoAtiva(p)?'<small class="promo-tag">PROMOÇÃO</small>':''}${Number(p.atacadoQtd)>0&&Number(p.atacadoPreco)>0?'<small>Atacado: '+Number(p.atacadoQtd).toLocaleString('pt-BR',{maximumFractionDigits:3})+'+ por '+money(p.atacadoPreco)+'</small>':''}</div>
   `).join('')||'<div class="empty">Cadastre mercadorias para começar a vender.</div>';
 
   el('vendaCliente').innerHTML=state.clientes.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
@@ -1059,10 +1267,10 @@ function renderPdv(){
   if(state.pdvCliente && state.clientes.some(c=>c.id===state.pdvCliente)) el('vendaCliente').value=state.pdvCliente;
   el('carrinhoItens').innerHTML=state.carrinho.map(i=>{
     const p=state.produtos.find(p=>p.id===i.produtoId); if(!p)return '';
-    const qtdTxt=Number(i.qtd||0).toLocaleString('pt-BR',{maximumFractionDigits:3}); return `<div class="cart-line"><div><strong>${esc(p.nome)}</strong><small>${money(p.venda)} / ${esc(p.unidade||'UN')} · ${qtdTxt} ${esc(p.unidade||'UN')}</small></div><div class="qty-controls"><button class="mini-btn" onclick="qtyCart('${p.id}',-1)">−</button><b>${qtdTxt}</b><button class="mini-btn" onclick="qtyCart('${p.id}',1)">+</button></div></div>`;
+    const qtdTxt=Number(i.qtd||0).toLocaleString('pt-BR',{maximumFractionDigits:3}); const pp=precoProduto(p,i.qtd); return `<div class="cart-line"><div><strong>${esc(p.nome)}</strong><small>${money(pp.preco)} / ${esc(p.unidade||'UN')} · ${qtdTxt} ${esc(p.unidade||'UN')} ${pp.tipo!=='normal'?'· '+pp.tipo.toUpperCase():''}</small></div><div class="qty-controls"><button class="mini-btn" onclick="qtyCart('${p.id}',-1)">−</button><b>${qtdTxt}</b><button class="mini-btn" onclick="qtyCart('${p.id}',1)">+</button></div></div>`;
   }).join('')||'<div class="empty">Carrinho vazio.</div>';
 
-  const sub=state.carrinho.reduce((a,i)=>{const p=state.produtos.find(p=>p.id===i.produtoId);return a+(p?Number(p.venda)*i.qtd:0)},0);
+  const sub=state.carrinho.reduce((a,i)=>{const p=state.produtos.find(p=>p.id===i.produtoId);return a+(p?precoProduto(p,i.qtd).preco*Number(i.qtd):0)},0);
   const desc=Number(el('cartDesconto')?.value||0);
   el('cartSubtotal').textContent=money(sub); el('cartTotal').textContent=money(Math.max(0,sub-desc));
   const cx=el('pdvCaixaStatus'); if(cx){cx.textContent=state.caixaAtual?'Caixa aberto':'Caixa fechado';cx.className='badge '+(state.caixaAtual?'ok':'danger')}
@@ -1390,9 +1598,9 @@ function cancelarPixPendente(){
 
 function createSale(status='pago'){
   if(!state.carrinho.length)return null;
-  const sub=state.carrinho.reduce((a,i)=>{const p=state.produtos.find(p=>p.id===i.produtoId);return a+(p?Number(p.venda)*i.qtd:0)},0);
+  const sub=state.carrinho.reduce((a,i)=>{const p=state.produtos.find(p=>p.id===i.produtoId);return a+(p?precoProduto(p,i.qtd).preco*Number(i.qtd):0)},0);
   const desconto=Number(el('cartDesconto').value||0), total=Math.max(0,sub-desconto);
-  const itens=state.carrinho.map(i=>{const p=state.produtos.find(p=>p.id===i.produtoId);return {...structuredClone(i),unitPrice:Number(p?.venda||0),unitCost:Number(p?.custo||0),nome:p?.nome||'Produto'}});
+  const itens=state.carrinho.map(i=>{const p=state.produtos.find(p=>p.id===i.produtoId);const pp=p?precoProduto(p,i.qtd):{tipo:'normal',preco:0};return {...structuredClone(i),unitPrice:Number(pp.preco||0),priceType:pp.tipo,unitCost:Number(p?.custo||0),nome:p?.nome||'Produto'}});
   const venda={id:uid(),numero:String(state.vendas.length+1).padStart(5,'0'),data:todayISO(),clienteId:el('vendaCliente').value,pagamento:el('pagamentoTipo').value,status,total,desconto,itens,pedidoId:state._pedidoEmFaturamento||null,orcamentoId:state._orcamentoEmVenda||null};
   state.vendas.push(venda);
   if(status==='pago')confirmSale(venda);
@@ -1491,7 +1699,7 @@ window.delCliente=id=>{const c=state.clientes.find(c=>c.id===id);if(c?.nome==='C
 function cartSnapshot(){
   return state.carrinho.map(i=>{
     const p=state.produtos.find(p=>p.id===i.produtoId);
-    return {...structuredClone(i),nome:p?.nome||'Produto',unitPrice:Number(p?.venda||0),unitCost:Number(p?.custo||0)};
+    const pp=p?precoProduto(p,i.qtd):{preco:0,tipo:'normal'};return {...structuredClone(i),nome:p?.nome||'Produto',unitPrice:Number(pp.preco||0),priceType:pp.tipo,unitCost:Number(p?.custo||0)};
   });
 }
 function calcItensTotal(itens,desconto=0){
@@ -1785,6 +1993,7 @@ function upsertXmlProduct(item){
     id:uid(),sku:item.sku||item.barcode||uid().slice(0,8),nome:item.nome||'Produto XML',
     barcode:item.barcode||'',categoria:'',marca:'',setor:'',custo:Number(item.custo||0),venda:0,
     estoque:Number(item.qtd||0),minimo:0,unidade:item.unidade||'UN',
+    promoPreco:0,promoInicio:'',promoFim:'',atacadoQtd:0,atacadoPreco:0,
     ncm:item.ncm||'',cest:item.cest||'',cfop:item.cfop||'',cst:'',origem:'0'
   };
   state.produtos.push(p);
@@ -2109,7 +2318,7 @@ el('importInput').addEventListener('change',async e=>{
   try{const data=JSON.parse(await file.text());state=data;save();alert('Backup importado com sucesso.')}catch(err){alert('Arquivo inválido.')}
 });
 
-function renderAll(){renderDashboard();renderProdutos();renderEstoque();renderPdv();renderOrcamentos();renderPedidos();renderClientes();renderFornecedores();renderCompras();renderVendas();renderFinanceiro();renderVendedores();renderFiscal();renderCaixa();renderContas();renderConfig();atualizarParcelas()}
+function renderAll(){renderDashboard();renderProdutos();renderEstoque();renderValidade();renderInventario();renderPdv();renderOrcamentos();renderPedidos();renderClientes();renderFornecedores();renderCompras();renderVendas();renderFinanceiro();renderVendedores();renderFiscal();renderCaixa();renderContas();renderConfig();atualizarParcelas()}
 renderAll();
 initMobileScannerMode();
 
