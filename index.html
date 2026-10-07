@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#111827" />
-  <title>DW ERP Supermercado — V2.3 Gerencial</title>
+  <title>DW ERP Supermercado — V2.3.1 Gerencial</title>
   
   <style>
 
@@ -16,7 +16,7 @@
 button,input,select{font:inherit}.app-shell{display:flex;min-height:100vh}
 .sidebar{width:248px;background:#0f172a;color:#fff;padding:22px 16px;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:20}
 .brand{display:flex;gap:12px;align-items:center;padding:0 8px 22px}.brand-mark{width:42px;height:42px;border-radius:12px;background:var(--primary);display:grid;place-items:center;font-weight:900}.brand strong{display:block;font-size:18px}.brand small{color:#94a3b8}
-nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:transparent;color:#cbd5e1;padding:12px 14px;border-radius:10px;text-align:left;cursor:pointer;display:flex;gap:10px;align-items:center}.nav-item:hover,.nav-item.active{background:#1e293b;color:#fff}.sidebar-footer{margin-top:auto;color:#94a3b8;font-size:13px;padding:12px}.status-dot{display:inline-block;width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:6px}
+nav{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padding-right:4px}.sidebar nav::-webkit-scrollbar{width:6px}.sidebar nav::-webkit-scrollbar-thumb{background:#334155;border-radius:999px}.nav-item{border:0;background:transparent;color:#cbd5e1;padding:12px 14px;border-radius:10px;text-align:left;cursor:pointer;display:flex;gap:10px;align-items:center}.nav-item:hover,.nav-item.active{background:#1e293b;color:#fff}.sidebar-footer{margin-top:auto;color:#94a3b8;font-size:13px;padding:12px}.status-dot{display:inline-block;width:8px;height:8px;background:#22c55e;border-radius:50%;margin-right:6px}
 .main{margin-left:248px;width:calc(100% - 248px);padding:24px}.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}.top-left{display:flex;gap:12px;align-items:center}.topbar h1{margin:0;font-size:26px}.topbar p{margin:3px 0 0;color:var(--muted)}.top-actions{display:flex;gap:10px}
 .icon-btn{border:0;background:transparent;font-size:20px;cursor:pointer}.top-left>.icon-btn{display:none}
 .btn{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}.btn.primary{background:var(--primary);color:#fff}.btn.primary:hover{background:var(--primary-dark)}.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--text)}.btn:disabled{opacity:.5;cursor:not-allowed}.full{width:100%}
@@ -95,11 +95,13 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-mark">DW</div>
-        <div><strong>DW ERP</strong><small>Supermercado V2.3</small></div>
+        <div><strong>DW ERP</strong><small>Supermercado V2.3.1</small></div>
       </div>
 
       <nav id="nav">
         <button class="nav-item active" data-view="dashboard">🏠 <span>Dashboard</span></button>
+        <button class="nav-item" data-view="relatorios">📈 <span>Relatórios</span></button>
+        <button class="nav-item" data-view="etiquetas">🏷️ <span>Etiquetas</span></button>
         <button class="nav-item" data-view="produtos">📦 <span>Mercadorias</span></button>
         <button class="nav-item" data-view="estoque">🏷️ <span>Estoque</span></button>
         <button class="nav-item" data-view="validade">⏳ <span>Validade & Perdas</span></button>
@@ -116,8 +118,6 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
         <button class="nav-item" data-view="fiscal">🧾 <span>Fiscal</span></button>
         <button class="nav-item" data-view="caixa">🧮 <span>Caixa</span></button>
         <button class="nav-item" data-view="contas">📅 <span>Contas</span></button>
-        <button class="nav-item" data-view="relatorios">📈 <span>Relatórios</span></button>
-        <button class="nav-item" data-view="etiquetas">🏷️ <span>Etiquetas</span></button>
         <button class="nav-item" data-view="configuracoes">⚙️ <span>Configurações</span></button>
       </nav>
 
@@ -2519,7 +2519,14 @@ function renderAll(){renderDashboard();renderProdutos();renderEstoque();renderVa
 renderAll();
 initMobileScannerMode();
 
-if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+if('serviceWorker'in navigator){
+  window.addEventListener('load',async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register('./sw.js?v=231',{updateViaCache:'none'});
+      await reg.update();
+    }catch{}
+  });
+}
 
 </script>
 </body>
