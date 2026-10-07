@@ -76,6 +76,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 @media(max-width:760px){.top-actions #phoneScannerBtn{display:none}.camera-wrap,.camera-wrap video{min-height:52vh}.mobile-scanner-main{padding:12px}}
 
 .catalog-lookup-btn{padding:5px 0;margin-top:3px;text-align:left}.online-product-box{grid-column:1/-1;display:flex;gap:12px;align-items:center;border:1px solid #fed7aa;background:#fff7ed;border-radius:12px;padding:12px}.online-product-box img{width:62px;height:62px;object-fit:contain;border-radius:9px;background:#fff;border:1px solid var(--line)}.online-product-box strong,.online-product-box span,.online-product-box small{display:block}.online-product-box span{color:var(--muted);font-size:12px;margin:3px 0}.online-product-box small{color:#9a3412;font-size:11px}
+.pix-real-qr{display:flex;justify-content:center;align-items:center;min-height:270px;margin:0 auto 8px}.pix-real-qr img,.pix-real-qr canvas{width:260px!important;height:260px!important;max-width:100%}.pix-copy{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;resize:none;margin:10px 0}.pix-txid{display:block;color:var(--muted);margin-top:3px}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
@@ -255,7 +256,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
               <label>Parcelas<select id="pagamentoParcelas" class="input full"></select></label>
             </div>
             <div class="dual-actions"><button class="btn ghost full" id="salvarOrcamentoBtn">Salvar orçamento</button><button class="btn primary full" id="finalizarVenda">Finalizar venda</button></div>
-            <p class="helper">Na V1, Pix fica em modo demonstração. A confirmação automática será ligada ao provedor/API no backend.</p>
+            <p class="helper">Pix: gera QR com o valor da venda usando sua chave configurada. Confirme o recebimento antes de concluir.</p>
           </section>
         </div>
       </section>
@@ -525,20 +526,26 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
             <div class="panel-head"><h2>Empresa</h2></div>
             <label>Nome fantasia<input id="cfgEmpresa" class="input full" /></label>
             <label>CNPJ<input id="cfgCnpj" class="input full" /></label>
-            <label>Chave Pix<input id="cfgPix" class="input full" placeholder="Chave Pix principal" /></label>
+            <label>Banco / recebedor<select id="cfgPixProvider" class="input full">
+              <option value="Nubank">Nubank</option>
+              <option value="Outro">Outro banco</option>
+            </select></label>
+            <label>Tipo de chave<select id="cfgPixType" class="input full">
+              <option value="aleatoria">Chave aleatória</option>
+              <option value="cpf_cnpj">CPF/CNPJ</option>
+              <option value="telefone">Telefone</option>
+              <option value="email">E-mail</option>
+            </select></label>
+            <label>Chave Pix<input id="cfgPix" class="input full" placeholder="Sua chave Pix do Nubank" autocomplete="off" /></label>
+            <label>Nome do recebedor<input id="cfgPixName" class="input full" maxlength="25" placeholder="Nome como aparece no Pix" /></label>
+            <label>Cidade do recebedor<input id="cfgPixCity" class="input full" maxlength="15" placeholder="Ex.: LAGO DA PEDRA" /></label>
             <button class="btn primary" id="salvarConfig">Salvar configurações</button>
           </section>
 
           <section class="panel">
-            <div class="panel-head"><h2>Pix automático</h2><span class="badge warn">Preparado</span></div>
-            <p>Estrutura pronta para integração via API + webhook. O provedor será configurado no backend para gerar QR Code dinâmico e confirmar pagamento automaticamente.</p>
-            <label>Provedor<select id="cfgPixProvider" class="input full">
-              <option value="">Selecionar depois</option>
-              <option>Mercado Pago</option>
-              <option>PagBank</option>
-              <option>Efí / Gerencianet</option>
-              <option>Banco com API Pix</option>
-            </select></label>
+            <div class="panel-head"><h2>Pix no caixa</h2><span class="badge ok">QR automático</span></div>
+            <p>O DW ERP gera um QR Code Pix com o valor exato da venda usando sua chave. Para Nubank, o recebimento cai diretamente na conta vinculada à chave.</p>
+            <p class="helper"><strong>Confirmação:</strong> nesta etapa o operador confere o recebimento no app Nubank e confirma a venda no caixa. A confirmação bancária automática exige uma API/webhook de cobrança compatível.</p>
           </section>
 
           <section class="panel">
@@ -638,13 +645,17 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
   </dialog>
 
   <dialog id="pixModal" class="modal small-modal">
-    <div class="modal-head"><h2>Pagamento via Pix</h2><button id="fecharPix" class="icon-btn">✕</button></div>
+    <div class="modal-head"><h2>Pagamento via Pix • Nubank</h2><button id="fecharPix" class="icon-btn">✕</button></div>
     <div class="pix-box">
-      <div class="qr-placeholder">QR<br/>PIX</div>
+      <div id="pixQrCode" class="pix-real-qr"></div>
       <strong id="pixValor">R$ 0,00</strong>
       <span id="pixStatus" class="badge warn">Aguardando pagamento</span>
-      <p>Modo demonstração da V1. Na versão integrada, esta tela será atualizada automaticamente pelo webhook do banco/provedor.</p>
-      <button id="simularPixPago" class="btn primary full">Simular confirmação do Pix</button>
+      <small id="pixTxid" class="pix-txid"></small>
+      <textarea id="pixCopiaCola" class="input full pix-copy" readonly rows="4"></textarea>
+      <button id="copiarPixBtn" class="btn ghost full">Copiar Pix Copia e Cola</button>
+      <p class="helper">Confira o recebimento no app Nubank antes de confirmar. O estoque só será baixado após a confirmação.</p>
+      <button id="simularPixPago" class="btn primary full">✓ Confirmar Pix recebido</button>
+      <button id="cancelarPixBtn" class="btn ghost full danger-outline">Cancelar cobrança</button>
     </div>
   </dialog>
   <script>
@@ -681,7 +692,7 @@ const defaultState={
   vendas:[],
   financeiro:[],
   carrinho:[],
-  config:{empresa:'DW ERP Supermercado',cnpj:'',pix:'',pixProvider:''}
+  config:{empresa:'DW ERP Supermercado',cnpj:'',pix:'',pixProvider:'Nubank',pixType:'aleatoria',pixName:'',pixCity:''}
 };
 let state=load();
 state.fornecedores=state.fornecedores||[];
@@ -693,6 +704,11 @@ state.orcamentos=state.orcamentos||[];
 state.pedidos=state.pedidos||[];
 state.vendedores=state.vendedores||[];
 state.fiscalConfig=state.fiscalConfig||{razao:'',ie:'',crt:'',ambiente:'homologacao'};
+state.config=state.config||{};
+state.config.pixProvider=state.config.pixProvider||'Nubank';
+state.config.pixType=state.config.pixType||'aleatoria';
+state.config.pixName=state.config.pixName||'';
+state.config.pixCity=state.config.pixCity||'';
 let vendaPixPendente=null;
 state.pdvCliente=state.pdvCliente||state.clientes[0]?.id||'';
 
@@ -1265,6 +1281,83 @@ el('cartDesconto').addEventListener('input',renderPdv);
 el('vendaCliente').addEventListener('change',()=>{state.pdvCliente=el('vendaCliente').value;localStorage.setItem(KEY,JSON.stringify(state))});
 el('limparCarrinho').onclick=()=>{state.carrinho=[];save()};
 
+
+function pixAscii(value,max){
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 .-]/g,' ').replace(/\s+/g,' ').trim().slice(0,max);
+}
+function pixField(id,value){
+  value=String(value??'');
+  return id+String(value.length).padStart(2,'0')+value;
+}
+function pixCrc16(payload){
+  let crc=0xFFFF;
+  for(let i=0;i<payload.length;i++){
+    crc^=(payload.charCodeAt(i)<<8);
+    for(let j=0;j<8;j++) crc=(crc&0x8000)?((crc<<1)^0x1021):(crc<<1);
+    crc&=0xFFFF;
+  }
+  return crc.toString(16).toUpperCase().padStart(4,'0');
+}
+function gerarPixCopiaCola({chave,nome,cidade,valor,txid}){
+  chave=String(chave||'').trim();
+  nome=pixAscii(nome,25);
+  cidade=pixAscii(cidade,15);
+  txid=String(txid||'***').replace(/[^A-Za-z0-9]/g,'').slice(0,25)||'***';
+  if(!chave)throw new Error('Chave Pix não configurada.');
+  if(!nome)throw new Error('Nome do recebedor Pix não configurado.');
+  if(!cidade)throw new Error('Cidade do recebedor Pix não configurada.');
+  const merchant=pixField('00','br.gov.bcb.pix')+pixField('01',chave);
+  const additional=pixField('05',txid);
+  let payload='';
+  payload+=pixField('00','01');
+  payload+=pixField('26',merchant);
+  payload+=pixField('52','0000');
+  payload+=pixField('53','986');
+  if(Number(valor)>0)payload+=pixField('54',Number(valor).toFixed(2));
+  payload+=pixField('58','BR');
+  payload+=pixField('59',nome);
+  payload+=pixField('60',cidade);
+  payload+=pixField('62',additional);
+  payload+='6304';
+  return payload+pixCrc16(payload);
+}
+function pixConfigOk(){
+  return Boolean(String(state.config.pix||'').trim()&&pixAscii(state.config.pixName,25)&&pixAscii(state.config.pixCity,15));
+}
+function renderPixVenda(venda){
+  const txid=('DW'+String(venda.numero||'')).replace(/[^A-Za-z0-9]/g,'').slice(0,25);
+  const payload=gerarPixCopiaCola({
+    chave:state.config.pix,
+    nome:state.config.pixName,
+    cidade:state.config.pixCity,
+    valor:venda.total,
+    txid
+  });
+  venda.pix={txid,payload,provider:state.config.pixProvider||'Nubank'};
+  el('pixValor').textContent=money(venda.total);
+  el('pixStatus').textContent='Aguardando pagamento';
+  el('pixStatus').className='badge warn';
+  el('pixTxid').textContent='Identificador: '+txid;
+  el('pixCopiaCola').value=payload;
+  const box=el('pixQrCode');box.innerHTML='';
+  if(typeof window.QRCode==='function'){
+    new QRCode(box,{text:payload,width:260,height:260,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  }else{
+    box.innerHTML='<div class="empty">QR indisponível. Use o Pix Copia e Cola.</div>';
+  }
+  localStorage.setItem(KEY,JSON.stringify(state));
+}
+function cancelarPixPendente(){
+  const id=vendaPixPendente;
+  if(id){
+    const v=state.vendas.find(v=>v.id===id);
+    if(v&&v.status!=='pago')state.vendas=state.vendas.filter(x=>x.id!==id);
+  }
+  vendaPixPendente=null;
+  if(el('pixModal').open)el('pixModal').close();
+  save();
+}
+
 function createSale(status='pago'){
   if(!state.carrinho.length)return null;
   const sub=state.carrinho.reduce((a,i)=>{const p=state.produtos.find(p=>p.id===i.produtoId);return a+(p?Number(p.venda)*i.qtd:0)},0);
@@ -1308,17 +1401,47 @@ el('finalizarVenda').onclick=()=>{
     if(recebido<Math.max(0,total))return alert('O valor recebido é menor que o total da venda.');
   }
   if(pg==='pix'){
+    if(!pixConfigOk()){
+      alert('Configure sua chave Pix, nome do recebedor e cidade em Configurações antes de vender por Pix.');
+      navigate('configuracoes');
+      return;
+    }
+    if(vendaPixPendente){
+      const antiga=state.vendas.find(v=>v.id===vendaPixPendente);
+      if(antiga&&antiga.status!=='pago')state.vendas=state.vendas.filter(v=>v.id!==vendaPixPendente);
+      vendaPixPendente=null;
+    }
     const venda=createSale('pendente'); if(!venda)return;
-    vendaPixPendente=venda.id; el('pixValor').textContent=money(venda.total);el('pixStatus').textContent='Aguardando pagamento';el('pixStatus').className='badge warn';el('pixModal').showModal();
+    vendaPixPendente=venda.id;
+    try{
+      renderPixVenda(venda);
+      el('pixModal').showModal();
+    }catch(err){
+      state.vendas=state.vendas.filter(v=>v.id!==venda.id);
+      vendaPixPendente=null;
+      save();
+      alert(err.message||'Não foi possível gerar o Pix.');
+    }
   }else{
     const venda=createSale('pago'); if(venda)alert(`Venda #${venda.numero} concluída.`);
   }
 };
 el('simularPixPago').onclick=()=>{
   const v=state.vendas.find(v=>v.id===vendaPixPendente);if(!v)return;
-  confirmSale(v);el('pixStatus').textContent='Pagamento confirmado';el('pixStatus').className='badge ok';setTimeout(()=>el('pixModal').close(),650);
+  if(!confirm('Confirma que o Pix foi recebido na conta Nubank?'))return;
+  confirmSale(v);
+  vendaPixPendente=null;
+  el('pixStatus').textContent='Pagamento confirmado';
+  el('pixStatus').className='badge ok';
+  setTimeout(()=>el('pixModal').close(),650);
 };
-el('fecharPix').onclick=()=>el('pixModal').close();
+el('copiarPixBtn').onclick=async()=>{
+  const value=el('pixCopiaCola').value;
+  try{await navigator.clipboard.writeText(value);el('pixStatus').textContent='Pix Copia e Cola copiado';}
+  catch{el('pixCopiaCola').select();document.execCommand('copy')}
+};
+el('cancelarPixBtn').onclick=()=>{if(confirm('Cancelar esta cobrança Pix?'))cancelarPixPendente()};
+el('fecharPix').onclick=()=>{if(vendaPixPendente){if(confirm('Fechar e cancelar esta cobrança Pix?'))cancelarPixPendente()}else el('pixModal').close()};
 
 function renderClientes(){
   el('clientesTbody').innerHTML=state.clientes.map(c=>{
@@ -1712,10 +1835,27 @@ window.baixarConta=id=>{
 };
 
 function renderConfig(){
-  el('cfgEmpresa').value=state.config.empresa||'';el('cfgCnpj').value=state.config.cnpj||'';el('cfgPix').value=state.config.pix||'';el('cfgPixProvider').value=state.config.pixProvider||'';
+  el('cfgEmpresa').value=state.config.empresa||'';
+  el('cfgCnpj').value=state.config.cnpj||'';
+  el('cfgPixProvider').value=state.config.pixProvider||'Nubank';
+  el('cfgPixType').value=state.config.pixType||'aleatoria';
+  el('cfgPix').value=state.config.pix||'';
+  el('cfgPixName').value=state.config.pixName||'';
+  el('cfgPixCity').value=state.config.pixCity||'';
 }
 el('salvarConfig').onclick=()=>{
-  state.config={empresa:el('cfgEmpresa').value.trim(),cnpj:el('cfgCnpj').value.trim(),pix:el('cfgPix').value.trim(),pixProvider:el('cfgPixProvider').value};save();alert('Configurações salvas.');
+  state.config={
+    ...state.config,
+    empresa:el('cfgEmpresa').value.trim(),
+    cnpj:el('cfgCnpj').value.trim(),
+    pixProvider:el('cfgPixProvider').value,
+    pixType:el('cfgPixType').value,
+    pix:el('cfgPix').value.trim(),
+    pixName:el('cfgPixName').value.trim(),
+    pixCity:el('cfgPixCity').value.trim()
+  };
+  save();
+  alert('Configurações salvas. O Pix já pode ser usado no PDV.');
 };
 
 function exportData(){
