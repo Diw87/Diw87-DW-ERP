@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#111827" />
-  <title>DW ERP Supermercado — V2.3.1 Gerencial</title>
+  <title>DW ERP Supermercado — V2.4 Cloud</title>
   
   <style>
 
@@ -85,6 +85,8 @@ nav{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padd
 .report-grid .panel{min-height:280px}.report-bar{margin:10px 0}.report-bar-head{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:4px}.report-track{height:9px;background:#e5e7eb;border-radius:999px;overflow:hidden}.report-fill{height:100%;background:var(--primary);border-radius:999px}.report-list-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}.report-list-row small{display:block;color:var(--muted)}.report-empty{padding:22px;text-align:center;color:var(--muted)}
 .label-check{width:18px;height:18px}
 @media print{#view-relatorios .toolbar,.sidebar,.topbar{display:none!important}#view-relatorios{display:block!important}.main{margin:0!important;width:100%!important;padding:0!important}}
+
+.cloud-panel .btn{margin-top:6px}.cloud-divider{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:12px}.cloud-divider:before,.cloud-divider:after{content:'';height:1px;background:var(--line);flex:1}.cloud-store-info{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:#f8fafc}.cloud-store-info span,.cloud-store-info small{display:block;color:var(--muted)}.cloud-store-info strong{display:block;font-size:24px;letter-spacing:2px;margin:3px 0}.cloud-pair-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;resize:none}.cloud-conflict{color:var(--danger)!important;font-weight:700}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
@@ -95,7 +97,7 @@ nav{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padd
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-mark">DW</div>
-        <div><strong>DW ERP</strong><small>Supermercado V2.3.1</small></div>
+        <div><strong>DW ERP</strong><small>Supermercado V2.4 Cloud</small></div>
       </div>
 
       <nav id="nav">
@@ -136,6 +138,7 @@ nav{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padd
           </div>
         </div>
         <div class="top-actions">
+          <span id="cloudTopStatus" class="badge warn">☁️ Local</span>
           <button class="btn ghost" id="phoneScannerBtn">📱 Leitor celular</button>
           <button class="btn ghost" id="exportBtn">Exportar backup</button>
           <button class="btn primary" data-open-sale>Nova venda</button>
@@ -732,6 +735,35 @@ nav{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padd
             </div>
           </section>
 
+          <section class="panel cloud-panel">
+            <div class="panel-head"><h2>Sincronização em nuvem</h2><span id="cloudStatusBadge" class="badge warn">Somente local</span></div>
+            <p>Sincronize produtos, estoque, vendas, clientes, fornecedores, compras, financeiro, perdas e demais dados do supermercado entre aparelhos.</p>
+            <div id="cloudDisconnectedBox">
+              <button class="btn primary full" id="cloudCreateBtn">☁️ Ativar nuvem nesta loja</button>
+              <div class="cloud-divider"><span>ou</span></div>
+              <label>Chave de pareamento de outro aparelho
+                <input id="cloudPairInput" class="input full" autocomplete="off" placeholder="Cole a chave DWCLD1|..." />
+              </label>
+              <button class="btn ghost full" id="cloudConnectBtn">Conectar este aparelho</button>
+            </div>
+            <div id="cloudConnectedBox" style="display:none">
+              <div class="cloud-store-info">
+                <span>Loja</span><strong id="cloudStoreCode">—</strong>
+                <small id="cloudLastSync">Ainda não sincronizado</small>
+              </div>
+              <label>Chave para conectar outro aparelho
+                <textarea id="cloudPairCode" class="input full cloud-pair-code" rows="3" readonly></textarea>
+              </label>
+              <div class="dual-actions">
+                <button class="btn ghost full" id="cloudCopyBtn">Copiar chave</button>
+                <button class="btn ghost full" id="cloudPullBtn">Baixar da nuvem</button>
+              </div>
+              <button class="btn primary full" id="cloudPushBtn" style="margin-top:8px">Enviar dados agora</button>
+              <button class="btn ghost full danger-outline" id="cloudDisconnectBtn" style="margin-top:8px">Desconectar este aparelho</button>
+              <p id="cloudMessage" class="helper"></p>
+            </div>
+          </section>
+
           <section class="panel">
             <div class="panel-head"><h2>Backup</h2></div>
             <p>Exporte os dados locais da V1 em JSON. Quando ligarmos o banco online, os backups passam a ser centralizados.</p>
@@ -842,12 +874,20 @@ nav{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padd
 const KEY='dw_erp_v1';
 const SCANNER_BRIDGE_URL='https://ecptjdykrzyiekunxylx.supabase.co/functions/v1/erp-scanner-bridge';
 const PRODUCT_LOOKUP_URL='https://ecptjdykrzyiekunxylx.supabase.co/functions/v1/erp-product-lookup';
+const CLOUD_SYNC_URL='https://ecptjdykrzyiekunxylx.supabase.co/functions/v1/erp-cloud-sync';
+const CLOUD_CFG_KEY='dw_erp_cloud_v1';
 let phoneScannerSession=null;
 let phoneScannerPollTimer=null;
 let mobileScannerControls=null;
 let mobileScannerSending=false;
 let mobileScannerLastCode='';
 let mobileScannerLastAt=0;
+let cloudCfg=loadCloudCfg();
+let cloudDirty=false;
+let cloudSyncing=false;
+let cloudConflict=false;
+let cloudPushTimer=null;
+let cloudPollTimer=null;
 const todayISO=()=>new Date().toISOString();
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const uid=()=>crypto?.randomUUID?.() || (Date.now()+'-'+Math.random().toString(16).slice(2));
@@ -908,10 +948,194 @@ function load(){
     return raw?{...structuredClone(defaultState),...JSON.parse(raw)}:structuredClone(defaultState);
   }catch(e){return structuredClone(defaultState)}
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(state));
+  renderAll();
+  if(cloudCfg?.storeCode){
+    cloudDirty=true;
+    renderCloudSync();
+    scheduleCloudPush();
+  }
+}
 function el(id){return document.getElementById(id)}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 
+
+
+function loadCloudCfg(){
+  try{return JSON.parse(localStorage.getItem(CLOUD_CFG_KEY)||'null')}catch{return null}
+}
+function persistCloudCfg(){
+  if(cloudCfg)localStorage.setItem(CLOUD_CFG_KEY,JSON.stringify(cloudCfg));
+  else localStorage.removeItem(CLOUD_CFG_KEY);
+}
+async function cloudBridge(payload){
+  const res=await fetch(CLOUD_SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  let data={};
+  try{data=await res.json()}catch{}
+  if(!res.ok){
+    const err=new Error(data.error||'Falha na sincronização.');
+    err.status=res.status;err.data=data;throw err;
+  }
+  return data;
+}
+function cloudManagedState(){
+  const copy=structuredClone(state);
+  delete copy.carrinho;
+  delete copy.pdvCliente;
+  delete copy.caixaAtual;
+  delete copy.inventarioDraft;
+  delete copy._pedidoEmFaturamento;
+  delete copy._orcamentoEmVenda;
+  return copy;
+}
+function applyCloudState(remote){
+  const localOnly={
+    carrinho:state.carrinho||[],
+    pdvCliente:state.pdvCliente||state.clientes?.[0]?.id||'',
+    caixaAtual:state.caixaAtual||null,
+    inventarioDraft:state.inventarioDraft||{},
+    _pedidoEmFaturamento:state._pedidoEmFaturamento||null,
+    _orcamentoEmVenda:state._orcamentoEmVenda||null
+  };
+  state={...structuredClone(defaultState),...structuredClone(remote||{}),...localOnly};
+  state.fornecedores=state.fornecedores||[];
+  state.compras=state.compras||[];
+  state.caixas=state.caixas||[];
+  state.contas=state.contas||[];
+  state.orcamentos=state.orcamentos||[];
+  state.pedidos=state.pedidos||[];
+  state.xmlImportados=state.xmlImportados||[];
+  state.lotes=state.lotes||[];
+  state.perdas=state.perdas||[];
+  state.inventarios=state.inventarios||[];
+  state.vendedores=state.vendedores||[];
+  state.financeiro=state.financeiro||[];
+  state.movimentos=state.movimentos||[];
+  state.vendas=state.vendas||[];
+  state.produtos=state.produtos||[];
+  state.clientes=state.clientes||[];
+  localStorage.setItem(KEY,JSON.stringify(state));
+  renderAll();
+}
+function cloudPairString(){
+  return cloudCfg?.storeCode&&cloudCfg?.secret?`DWCLD1|${cloudCfg.storeCode}|${cloudCfg.secret}`:'';
+}
+function parseCloudPair(value){
+  const parts=String(value||'').trim().split('|');
+  if(parts.length!==3||parts[0]!=='DWCLD1')return null;
+  const storeCode=parts[1].trim().toUpperCase(),secret=parts[2].trim();
+  if(!storeCode||!secret)return null;
+  return {storeCode,secret};
+}
+function cloudStatusText(){
+  if(!cloudCfg?.storeCode)return {label:'☁️ Local',cls:'warn'};
+  if(cloudConflict)return {label:'☁️ Conflito',cls:'danger'};
+  if(cloudSyncing)return {label:'☁️ Sincronizando',cls:'warn'};
+  if(cloudDirty)return {label:'☁️ Pendente',cls:'warn'};
+  return {label:'☁️ Nuvem',cls:'ok'};
+}
+function renderCloudSync(){
+  const connected=Boolean(cloudCfg?.storeCode&&cloudCfg?.secret);
+  const d=el('cloudDisconnectedBox'),cn=el('cloudConnectedBox');
+  if(d)d.style.display=connected?'none':'block';
+  if(cn)cn.style.display=connected?'block':'none';
+  const st=cloudStatusText();
+  if(el('cloudTopStatus')){el('cloudTopStatus').textContent=st.label;el('cloudTopStatus').className='badge '+st.cls}
+  if(el('cloudStatusBadge')){
+    el('cloudStatusBadge').textContent=connected?(cloudConflict?'Conflito':cloudDirty?'Alterações pendentes':cloudSyncing?'Sincronizando':'Conectado'):'Somente local';
+    el('cloudStatusBadge').className='badge '+(connected?(cloudConflict?'danger':cloudDirty||cloudSyncing?'warn':'ok'):'warn');
+  }
+  if(!connected)return;
+  if(el('cloudStoreCode'))el('cloudStoreCode').textContent=cloudCfg.storeCode;
+  if(el('cloudPairCode'))el('cloudPairCode').value=cloudPairString();
+  if(el('cloudLastSync')){
+    el('cloudLastSync').textContent=cloudCfg.lastSync?('Última sincronização: '+new Date(cloudCfg.lastSync).toLocaleString('pt-BR')):'Ainda não sincronizado';
+  }
+  if(el('cloudMessage')){
+    el('cloudMessage').textContent=cloudConflict?'Há alterações em outro aparelho. Use “Baixar da nuvem” antes de continuar.':cloudDirty?'Alterações locais aguardando envio.':'Sincronização automática ativa.';
+    el('cloudMessage').className='helper '+(cloudConflict?'cloud-conflict':'');
+  }
+}
+async function createCloudStore(){
+  if(cloudCfg?.storeCode)return;
+  if(!confirm('Ativar a nuvem usando os dados atuais deste aparelho como base da loja?'))return;
+  try{
+    cloudSyncing=true;renderCloudSync();
+    const data=await cloudBridge({action:'create',state:cloudManagedState()});
+    cloudCfg={storeCode:data.storeCode,secret:data.secret,revision:Number(data.revision||1),lastSync:data.updatedAt||new Date().toISOString()};
+    persistCloudCfg();cloudDirty=false;cloudConflict=false;
+    renderCloudSync();startCloudPolling();
+    alert('Nuvem ativada. Guarde a chave de pareamento para conectar outros aparelhos.');
+  }catch(err){alert(err.message||'Não foi possível ativar a nuvem.')}
+  finally{cloudSyncing=false;renderCloudSync()}
+}
+async function connectCloudDevice(){
+  const parsed=parseCloudPair(el('cloudPairInput')?.value);
+  if(!parsed)return alert('Chave de pareamento inválida.');
+  if(!confirm('Conectar este aparelho e baixar os dados atuais da loja? Os dados compartilhados locais serão substituídos.'))return;
+  try{
+    cloudSyncing=true;renderCloudSync();
+    const data=await cloudBridge({action:'pull',...parsed});
+    cloudCfg={...parsed,revision:Number(data.revision||1),lastSync:data.updatedAt||new Date().toISOString()};
+    persistCloudCfg();cloudDirty=false;cloudConflict=false;
+    applyCloudState(data.state);
+    startCloudPolling();
+    if(el('cloudPairInput'))el('cloudPairInput').value='';
+    alert('Aparelho conectado à nuvem.');
+  }catch(err){alert(err.message||'Não foi possível conectar este aparelho.')}
+  finally{cloudSyncing=false;renderCloudSync()}
+}
+async function pushCloud(force=false){
+  if(!cloudCfg?.storeCode||cloudSyncing||(!cloudDirty&&!force))return;
+  try{
+    cloudSyncing=true;renderCloudSync();
+    const data=await cloudBridge({action:'push',storeCode:cloudCfg.storeCode,secret:cloudCfg.secret,baseRevision:Number(cloudCfg.revision||1),force,state:cloudManagedState()});
+    cloudCfg.revision=Number(data.revision||cloudCfg.revision);
+    cloudCfg.lastSync=data.updatedAt||new Date().toISOString();
+    persistCloudCfg();cloudDirty=false;cloudConflict=false;
+  }catch(err){
+    if(err.status===409&&err.data?.conflict){
+      cloudConflict=true;
+      cloudCfg.revision=Number(err.data.revision||cloudCfg.revision);
+      persistCloudCfg();
+    }else{
+      if(el('cloudMessage'))el('cloudMessage').textContent=err.message||'Falha ao enviar dados.';
+    }
+  }finally{cloudSyncing=false;renderCloudSync()}
+}
+async function pullCloud(manual=false){
+  if(!cloudCfg?.storeCode||cloudSyncing)return;
+  if(cloudDirty&&!manual)return;
+  if(manual&&cloudDirty&&!confirm('Existem alterações locais ainda não enviadas. Baixar da nuvem pode descartá-las. Continuar?'))return;
+  try{
+    cloudSyncing=true;renderCloudSync();
+    const data=await cloudBridge({action:'pull',storeCode:cloudCfg.storeCode,secret:cloudCfg.secret});
+    const remoteRev=Number(data.revision||1);
+    if(manual||remoteRev>Number(cloudCfg.revision||0)){
+      applyCloudState(data.state);
+    }
+    cloudCfg.revision=remoteRev;
+    cloudCfg.lastSync=data.updatedAt||new Date().toISOString();
+    persistCloudCfg();cloudDirty=false;cloudConflict=false;
+  }catch(err){
+    if(manual)alert(err.message||'Falha ao baixar dados da nuvem.');
+  }finally{cloudSyncing=false;renderCloudSync()}
+}
+function scheduleCloudPush(){
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer=setTimeout(()=>pushCloud(false),1200);
+}
+function startCloudPolling(){
+  clearInterval(cloudPollTimer);
+  if(!cloudCfg?.storeCode)return;
+  cloudPollTimer=setInterval(()=>{if(!cloudDirty&&!cloudSyncing)pullCloud(false)},12000);
+}
+function disconnectCloudDevice(){
+  if(!cloudCfg)return;
+  if(!confirm('Desconectar apenas este aparelho da nuvem? Os dados locais permanecerão neste dispositivo.'))return;
+  cloudCfg=null;persistCloudCfg();cloudDirty=false;cloudConflict=false;clearInterval(cloudPollTimer);renderCloudSync();
+}
 
 async function scannerBridge(payload){
   const res=await fetch(SCANNER_BRIDGE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -2481,6 +2705,18 @@ el('imprimirEtiquetasBtn').onclick=()=>{
 };
 
 
+
+el('cloudCreateBtn').onclick=createCloudStore;
+el('cloudConnectBtn').onclick=connectCloudDevice;
+el('cloudPushBtn').onclick=async()=>{cloudDirty=true;await pushCloud(false);if(!cloudConflict)alert('Dados enviados para a nuvem.')};
+el('cloudPullBtn').onclick=()=>pullCloud(true);
+el('cloudDisconnectBtn').onclick=disconnectCloudDevice;
+el('cloudCopyBtn').onclick=async()=>{
+  const value=cloudPairString();if(!value)return;
+  try{await navigator.clipboard.writeText(value);if(el('cloudMessage'))el('cloudMessage').textContent='Chave de pareamento copiada.'}
+  catch{prompt('Copie a chave de pareamento:',value)}
+};
+
 function renderConfig(){
   el('cfgEmpresa').value=state.config.empresa||'';
   el('cfgCnpj').value=state.config.cnpj||'';
@@ -2489,6 +2725,7 @@ function renderConfig(){
   el('cfgPix').value=state.config.pix||'';
   el('cfgPixName').value=state.config.pixName||'';
   el('cfgPixCity').value=state.config.pixCity||'';
+  renderCloudSync();
 }
 el('salvarConfig').onclick=()=>{
   state.config={
@@ -2517,12 +2754,15 @@ el('importInput').addEventListener('change',async e=>{
 
 function renderAll(){renderDashboard();renderProdutos();renderEstoque();renderValidade();renderInventario();renderPdv();renderOrcamentos();renderPedidos();renderClientes();renderFornecedores();renderCompras();renderVendas();renderFinanceiro();renderVendedores();renderFiscal();renderCaixa();renderContas();renderRelatorios();renderEtiquetas();renderConfig();atualizarParcelas()}
 renderAll();
+renderCloudSync();
+startCloudPolling();
+if(cloudCfg?.storeCode)setTimeout(()=>pullCloud(false),900);
 initMobileScannerMode();
 
 if('serviceWorker'in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=231',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=240',{updateViaCache:'none'});
       await reg.update();
     }catch{}
   });
