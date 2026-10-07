@@ -75,6 +75,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 .mobile-scanner-screen{position:fixed;inset:0;background:#0f172a;color:#fff;z-index:9999;overflow:auto}.mobile-scanner-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:#111827}.mobile-scanner-head strong,.mobile-scanner-head small{display:block}.mobile-scanner-head small{color:#94a3b8;margin-top:2px}.mobile-scanner-main{padding:16px;max-width:560px;margin:auto}.camera-wrap{position:relative;background:#000;border-radius:18px;overflow:hidden;min-height:320px;display:grid;place-items:center}.camera-wrap video{width:100%;min-height:320px;object-fit:cover}.scan-frame{position:absolute;left:8%;right:8%;top:35%;height:30%;border:3px solid #f97316;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.18);pointer-events:none}.scanner-mobile-card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:14px;margin:14px 0;text-align:center}.scanner-mobile-card strong,.scanner-mobile-card span{display:block}.scanner-mobile-card span{color:#cbd5e1;margin-top:5px;font-size:13px}.scanner-big-btn{padding:15px;font-size:18px}.manual-scan{display:flex;gap:8px;margin-top:10px}.manual-scan .input{background:#fff;color:#111}.center{text-align:center;color:#94a3b8!important}
 @media(max-width:760px){.top-actions #phoneScannerBtn{display:none}.camera-wrap,.camera-wrap video{min-height:52vh}.mobile-scanner-main{padding:12px}}
 
+.catalog-lookup-btn{padding:5px 0;margin-top:3px;text-align:left}.online-product-box{grid-column:1/-1;display:flex;gap:12px;align-items:center;border:1px solid #fed7aa;background:#fff7ed;border-radius:12px;padding:12px}.online-product-box img{width:62px;height:62px;object-fit:contain;border-radius:9px;background:#fff;border:1px solid var(--line)}.online-product-box strong,.online-product-box span,.online-product-box small{display:block}.online-product-box span{color:var(--muted);font-size:12px;margin:3px 0}.online-product-box small{color:#9a3412;font-size:11px}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
@@ -612,7 +613,12 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
         <label>Código de barras
           <input id="pBarcode" class="input full barcode-field" autocomplete="off" inputmode="numeric" placeholder="Passe o leitor aqui" />
           <small class="field-help" id="barcodeHelp">Passe o leitor. O Enter do leitor verifica o código automaticamente.</small>
+          <button type="button" class="link-btn catalog-lookup-btn" id="buscarCatalogoBtn">🌐 Buscar na base online</button>
         </label>
+        <div id="onlineProductBox" class="online-product-box" style="display:none">
+          <img id="onlineProductImg" alt="" />
+          <div><strong id="onlineProductTitle"></strong><span id="onlineProductMeta"></span><small>Dados sugeridos pela base online. Revise principalmente NCM/CEST antes da emissão fiscal.</small></div>
+        </div>
         <label>Categoria<input id="pCategoria" class="input full" /></label><label>Marca<input id="pMarca" class="input full" placeholder="Ex.: Nestlé, Coca-Cola..." /></label><label>Setor<input id="pSetor" class="input full" placeholder="Ex.: Mercearia, Hortifruti, Açougue..." /></label>
         <label>Custo<input id="pCusto" class="input full" type="number" min="0" step="0.01" required /></label>
         <label>Preço de venda<input id="pVenda" class="input full" type="number" min="0" step="0.01" required /></label>
@@ -645,6 +651,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 
 const KEY='dw_erp_v1';
 const SCANNER_BRIDGE_URL='https://ecptjdykrzyiekunxylx.supabase.co/functions/v1/erp-scanner-bridge';
+const PRODUCT_LOOKUP_URL='https://ecptjdykrzyiekunxylx.supabase.co/functions/v1/erp-product-lookup';
 let phoneScannerSession=null;
 let phoneScannerPollTimer=null;
 let mobileScannerControls=null;
@@ -722,7 +729,7 @@ function scannerPayloadLink(sessionId,token){
 function currentViewName(){
   return document.querySelector('.view.active')?.id?.replace('view-','')||'dashboard';
 }
-function handleRemoteBarcode(code){
+async function handleRemoteBarcode(code){
   code=String(code||'').trim();
   if(!code)return;
   const modal=el('produtoModal');
@@ -742,7 +749,17 @@ function handleRemoteBarcode(code){
     }
     return;
   }
-  if(confirm('Código '+code+' não cadastrado. Deseja cadastrar esta mercadoria agora?')){
+  try{
+    const online=await lookupOnlineProduct(code);
+    if(online.found&&online.product){
+      if(confirm((online.product.name||('Código '+code))+' foi encontrado online. Deseja cadastrar?')){
+        navigate('produtos');
+        setTimeout(()=>{openProduto(null,code);setTimeout(()=>fillProductFromCatalog(online.product,Boolean(online.cached)),80)},40);
+      }
+      return;
+    }
+  }catch{}
+  if(confirm('Código '+code+' não encontrado online. Deseja cadastrar manualmente?')){
     navigate('produtos');
     setTimeout(()=>openProduto(null,code),40);
   }
@@ -851,6 +868,7 @@ function openProduto(p=null,barcodeInicial=''){
   updateMarginPreview();
   const help=el('barcodeHelp');
   if(help){help.textContent='Passe o leitor. O Enter do leitor verifica o código automaticamente.';help.className='field-help'}
+  if(el('onlineProductBox'))el('onlineProductBox').style.display='none';
   el('produtoModal').showModal();
   setTimeout(()=>{
     if(p || barcodeInicial) el('pNome')?.focus();
@@ -864,7 +882,60 @@ el('scanProdutoBtn').onclick=()=>{
   openProduto();
   setTimeout(()=>{el('pBarcode')?.focus();el('pBarcode')?.select()},30);
 };
-function verificarCodigoCadastro(){
+
+async function lookupOnlineProduct(gtin){
+  gtin=String(gtin||'').replace(/\D/g,'');
+  if(![8,12,13,14].includes(gtin.length))return {found:false,error:'GTIN/EAN inválido.'};
+  const res=await fetch(PRODUCT_LOOKUP_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gtin})});
+  let data={};
+  try{data=await res.json()}catch{}
+  if(!res.ok && !data.found)throw new Error(data.error||'Falha na consulta online.');
+  return data;
+}
+function showOnlineProduct(product,cached=false){
+  const box=el('onlineProductBox');
+  if(!box)return;
+  box.style.display='flex';
+  el('onlineProductTitle').textContent=product.name||'Produto encontrado';
+  const extras=[product.brand,product.category,product.ncm?('NCM '+product.ncm):'',cached?'Salvo no DW ERP':(product.source||'Base online')].filter(Boolean);
+  el('onlineProductMeta').textContent=extras.join(' · ');
+  const img=el('onlineProductImg');
+  if(product.imageUrl){img.src=product.imageUrl;img.style.display='block'}else{img.removeAttribute('src');img.style.display='none'}
+}
+function fillProductFromCatalog(product,cached=false){
+  if(!product)return;
+  if(!el('pNome').value.trim() && product.name)el('pNome').value=product.name;
+  if(!el('pMarca').value.trim() && product.brand)el('pMarca').value=product.brand;
+  if(!el('pCategoria').value.trim() && product.category)el('pCategoria').value=product.category;
+  if(!el('pNcm').value.trim() && product.ncm)el('pNcm').value=String(product.ncm).replace(/\D/g,'').slice(0,8);
+  if(!el('pCest').value.trim() && product.cest)el('pCest').value=String(product.cest).replace(/\D/g,'').slice(0,7);
+  if(product.unit && [...el('pUnidade').options].some(o=>o.value===product.unit))el('pUnidade').value=product.unit;
+  showOnlineProduct(product,cached);
+}
+async function buscarProdutoOnlineNoCadastro(){
+  const codigo=el('pBarcode').value.trim();
+  const help=el('barcodeHelp');
+  if(!codigo){help.textContent='Leia ou digite um código de barras.';help.className='field-help warn';return null}
+  try{
+    help.textContent='Consultando catálogo online...';help.className='field-help';
+    const data=await lookupOnlineProduct(codigo);
+    if(data.found&&data.product){
+      fillProductFromCatalog(data.product,Boolean(data.cached));
+      help.textContent=(data.cached?'Encontrado na base DW ERP.':'Encontrado online e salvo no DW ERP.')+' Revise os dados.';
+      help.className='field-help ok';
+      return data.product;
+    }
+    help.textContent='Código não encontrado na base online. Complete o cadastro manualmente.';
+    help.className='field-help warn';
+    return null;
+  }catch(err){
+    help.textContent='Consulta online indisponível: '+(err.message||'erro');
+    help.className='field-help warn';
+    return null;
+  }
+}
+
+async function verificarCodigoCadastro(){
   const codigo=el('pBarcode').value.trim();
   const help=el('barcodeHelp');
   if(!codigo){
@@ -880,15 +951,17 @@ function verificarCodigoCadastro(){
     return true;
   }
   if(!el('pSku').value.trim())el('pSku').value=codigo;
-  if(help){help.textContent='Código disponível para novo cadastro.';help.className='field-help ok'}
+  if(help){help.textContent='Código disponível. Buscando dados online...';help.className='field-help'}
+  await buscarProdutoOnlineNoCadastro();
   setTimeout(()=>el('pNome')?.focus(),20);
   return false;
 }
-el('pBarcode').addEventListener('keydown',e=>{
+el('pBarcode').addEventListener('keydown',async e=>{
   if(e.key!=='Enter')return;
   e.preventDefault();
-  verificarCodigoCadastro();
+  await verificarCodigoCadastro();
 });
+el('buscarCatalogoBtn').onclick=buscarProdutoOnlineNoCadastro;
 
 el('salvarProdutoBtn').onclick=()=>{
   const data={
@@ -1003,7 +1076,7 @@ el('pagamentoCondicao').addEventListener('change',atualizarParcelas);
 el('valorRecebido').addEventListener('input',renderTroco);
 
 
-el('pdvBusca').addEventListener('keydown',e=>{
+el('pdvBusca').addEventListener('keydown',async e=>{
   if(e.key!=='Enter')return;
   e.preventDefault();
   const q=el('pdvBusca').value.trim();
@@ -1015,8 +1088,19 @@ el('pdvBusca').addEventListener('keydown',e=>{
     renderPdv();
     return;
   }
-  if(confirm('Código '+q+' não cadastrado. Deseja cadastrar esta mercadoria agora?')){
-    el('pdvBusca').value='';
+  el('pdvBusca').value='';
+  try{
+    const online=await lookupOnlineProduct(q);
+    if(online.found&&online.product){
+      const nome=online.product.name||('Código '+q);
+      if(confirm(nome+' foi encontrado na base online. Deseja cadastrar esta mercadoria agora?')){
+        navigate('produtos');
+        setTimeout(()=>{openProduto(null,q);setTimeout(()=>fillProductFromCatalog(online.product,Boolean(online.cached)),80)},50);
+      }
+      return;
+    }
+  }catch{}
+  if(confirm('Código '+q+' não encontrado na base online. Deseja cadastrar manualmente?')){
     navigate('produtos');
     setTimeout(()=>openProduto(null,q),50);
   }
