@@ -77,6 +77,9 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 
 .catalog-lookup-btn{padding:5px 0;margin-top:3px;text-align:left}.online-product-box{grid-column:1/-1;display:flex;gap:12px;align-items:center;border:1px solid #fed7aa;background:#fff7ed;border-radius:12px;padding:12px}.online-product-box img{width:62px;height:62px;object-fit:contain;border-radius:9px;background:#fff;border:1px solid var(--line)}.online-product-box strong,.online-product-box span,.online-product-box small{display:block}.online-product-box span{color:var(--muted);font-size:12px;margin:3px 0}.online-product-box small{color:#9a3412;font-size:11px}
 .pix-real-qr{display:flex;justify-content:center;align-items:center;min-height:270px;margin:0 auto 8px}.pix-real-qr img,.pix-real-qr canvas{width:260px!important;height:260px!important;max-width:100%}.pix-copy{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;resize:none;margin:10px 0}.pix-txid{display:block;color:var(--muted);margin-top:3px}
+
+.xml-import-panel{margin-bottom:16px}.xml-import-panel .panel-head small{display:block;color:var(--muted);font-weight:400;margin-top:3px}.xml-import-controls{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 16px}.xml-import-summary{margin:0 18px 14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}.xml-import-summary strong{color:var(--primary-dark)}.xml-preview-wrap{max-height:420px;overflow:auto}.xml-new{color:#0369a1;font-weight:700}.xml-existing{color:#15803d;font-weight:700}.xml-duplicate{color:#b91c1c;font-weight:700}
+@media(max-width:760px){.xml-import-controls{display:grid;grid-template-columns:1fr}.xml-import-controls .btn,.xml-import-controls .input{width:100%}}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
@@ -86,7 +89,7 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-mark">DW</div>
-        <div><strong>DW ERP</strong><small>Supermercado V2.0</small></div>
+        <div><strong>DW ERP</strong><small>Supermercado V2.1</small></div>
       </div>
 
       <nav id="nav">
@@ -336,6 +339,30 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
       </section>
 
       <section id="view-compras" class="view">
+        <section class="panel xml-import-panel">
+          <div class="panel-head">
+            <div><h2>Importar XML de NF-e</h2><small>Cadastre produtos e dê entrada no estoque em lote</small></div>
+            <span class="badge ok">NF-e XML</span>
+          </div>
+          <div class="xml-import-controls">
+            <label class="btn ghost file-btn">Selecionar XMLs
+              <input type="file" id="xmlNfeInput" accept=".xml,text/xml,application/xml" multiple hidden />
+            </label>
+            <select id="xmlCompraStatus" class="input">
+              <option value="pago">Compra paga</option>
+              <option value="aberto">A pagar</option>
+            </select>
+            <button class="btn primary" id="aplicarXmlBtn" disabled>Importar para estoque</button>
+            <button class="btn ghost" id="limparXmlBtn" disabled>Limpar prévia</button>
+          </div>
+          <div id="xmlImportResumo" class="xml-import-summary empty">Selecione um ou vários XMLs de NF-e.</div>
+          <div class="table-wrap xml-preview-wrap" id="xmlPreviewWrap" style="display:none">
+            <table>
+              <thead><tr><th>NF</th><th>Fornecedor</th><th>Código</th><th>Produto</th><th>Qtd.</th><th>Un.</th><th>Custo</th><th>Total</th><th>Situação</th></tr></thead>
+              <tbody id="xmlPreviewTbody"></tbody>
+            </table>
+          </div>
+        </section>
         <div class="toolbar">
           <select id="compraFornecedor" class="input grow"></select>
           <select id="compraProduto" class="input grow"></select>
@@ -686,6 +713,7 @@ const defaultState={
   contas:[],
   orcamentos:[],
   pedidos:[],
+  xmlImportados:[],
   vendedores:[],
   fiscalConfig:{razao:'',ie:'',crt:'',ambiente:'homologacao'},
   movimentos:[],
@@ -702,6 +730,7 @@ state.caixaAtual=state.caixaAtual||null;
 state.contas=state.contas||[];
 state.orcamentos=state.orcamentos||[];
 state.pedidos=state.pedidos||[];
+state.xmlImportados=state.xmlImportados||[];
 state.vendedores=state.vendedores||[];
 state.fiscalConfig=state.fiscalConfig||{razao:'',ie:'',crt:'',ambiente:'homologacao'};
 state.config=state.config||{};
@@ -710,6 +739,7 @@ state.config.pixType=state.config.pixType||'aleatoria';
 state.config.pixName=state.config.pixName||'';
 state.config.pixCity=state.config.pixCity||'';
 let vendaPixPendente=null;
+let xmlImportPreview=[];
 state.pdvCliente=state.pdvCliente||state.clientes[0]?.id||'';
 
 function load(){
@@ -1612,8 +1642,219 @@ window.delFornecedor=id=>{
   if(confirm('Excluir fornecedor?')){state.fornecedores=state.fornecedores.filter(f=>f.id!==id);save()}
 };
 
+
+function xmlNodeText(parent,localName){
+  if(!parent)return '';
+  const nodes=parent.getElementsByTagNameNS?parent.getElementsByTagNameNS('*',localName):[];
+  if(nodes?.length)return String(nodes[0].textContent||'').trim();
+  const fallback=parent.getElementsByTagName?.(localName);
+  return fallback?.length?String(fallback[0].textContent||'').trim():'';
+}
+function xmlDirectChild(parent,localName){
+  if(!parent)return null;
+  return [...(parent.children||[])].find(n=>(n.localName||n.nodeName)===localName)||null;
+}
+function normalizeXmlBarcode(v){
+  const s=String(v||'').trim();
+  if(!s || /SEM GTIN/i.test(s))return '';
+  const d=s.replace(/\D/g,'');
+  return [8,12,13,14].includes(d.length)?d:'';
+}
+function normalizeXmlUnit(v){
+  const u=String(v||'UN').toUpperCase().trim();
+  const map={UN:'UN',UND:'UN',UNID:'UN',PC:'UN',PÇ:'UN',KG:'KG',K:'KG',LT:'LT',L:'LT',LITRO:'LT',CX:'CX',CAIXA:'CX',PCT:'PCT',PACOTE:'PCT',M:'M',MT:'M',M2:'M2'};
+  return map[u]||'UN';
+}
+function parseNfeXml(text,fileName='nota.xml'){
+  const doc=new DOMParser().parseFromString(text,'application/xml');
+  if(doc.getElementsByTagName('parsererror').length)throw new Error('XML inválido: '+fileName);
+  const inf=[...doc.getElementsByTagNameNS('*','infNFe')][0]||doc.getElementsByTagName('infNFe')[0];
+  if(!inf)throw new Error('Arquivo não parece ser uma NF-e: '+fileName);
+  const chave=String(inf.getAttribute('Id')||'').replace(/^NFe/,'');
+  const ide=[...doc.getElementsByTagNameNS('*','ide')][0]||doc.getElementsByTagName('ide')[0];
+  const emit=[...doc.getElementsByTagNameNS('*','emit')][0]||doc.getElementsByTagName('emit')[0];
+  const total=[...doc.getElementsByTagNameNS('*','ICMSTot')][0]||doc.getElementsByTagName('ICMSTot')[0];
+  const notaNumero=xmlNodeText(ide,'nNF')||fileName;
+  const dataEmissao=xmlNodeText(ide,'dhEmi')||xmlNodeText(ide,'dEmi')||todayISO();
+  const fornecedor={
+    nome:xmlNodeText(emit,'xNome')||'Fornecedor XML',
+    doc:xmlNodeText(emit,'CNPJ')||xmlNodeText(emit,'CPF')||''
+  };
+  const dets=[...doc.getElementsByTagNameNS('*','det')];
+  const itens=dets.map((det,idx)=>{
+    const prod=xmlDirectChild(det,'prod')||[...det.getElementsByTagNameNS('*','prod')][0];
+    if(!prod)return null;
+    const ean=normalizeXmlBarcode(xmlNodeText(prod,'cEAN'))||normalizeXmlBarcode(xmlNodeText(prod,'cEANTrib'));
+    const qtd=Number(xmlNodeText(prod,'qCom')||xmlNodeText(prod,'qTrib')||0);
+    const custo=Number(xmlNodeText(prod,'vUnCom')||xmlNodeText(prod,'vUnTrib')||0);
+    const totalItem=Number(xmlNodeText(prod,'vProd')||0)||(qtd*custo);
+    return {
+      idx,
+      sku:xmlNodeText(prod,'cProd')||ean||('XML-'+notaNumero+'-'+(idx+1)),
+      barcode:ean,
+      nome:xmlNodeText(prod,'xProd')||('Produto '+(idx+1)),
+      ncm:String(xmlNodeText(prod,'NCM')||'').replace(/\D/g,'').slice(0,8),
+      cest:String(xmlNodeText(prod,'CEST')||'').replace(/\D/g,'').slice(0,7),
+      cfop:String(xmlNodeText(prod,'CFOP')||'').replace(/\D/g,'').slice(0,4),
+      unidade:normalizeXmlUnit(xmlNodeText(prod,'uCom')||xmlNodeText(prod,'uTrib')),
+      qtd:Number.isFinite(qtd)?qtd:0,
+      custo:Number.isFinite(custo)?custo:0,
+      total:Number.isFinite(totalItem)?totalItem:0
+    };
+  }).filter(Boolean);
+  const dupNodes=[...doc.getElementsByTagNameNS('*','dup')];
+  const parcelas=dupNodes.map(d=>({
+    numero:xmlNodeText(d,'nDup')||'',
+    vencimento:xmlNodeText(d,'dVenc')||'',
+    valor:Number(xmlNodeText(d,'vDup')||0)
+  })).filter(x=>x.valor>0);
+  return {
+    fileName,chave,notaNumero,dataEmissao,fornecedor,itens,parcelas,
+    total:Number(xmlNodeText(total,'vNF')||itens.reduce((a,i)=>a+i.total,0))
+  };
+}
+function findExistingXmlProduct(item){
+  if(item.barcode){
+    const byCode=state.produtos.find(p=>String(p.barcode||'').trim()===item.barcode);
+    if(byCode)return byCode;
+  }
+  return state.produtos.find(p=>String(p.sku||'').trim()===String(item.sku||'').trim())||null;
+}
+function renderXmlPreview(){
+  const valid=xmlImportPreview.filter(n=>!n.duplicate);
+  const itens=valid.flatMap(n=>n.itens.map(i=>({nota:n,item:i})));
+  const novos=itens.filter(x=>!findExistingXmlProduct(x.item)).length;
+  const existentes=itens.length-novos;
+  const duplicadas=xmlImportPreview.filter(n=>n.duplicate).length;
+  const total=valid.reduce((a,n)=>a+Number(n.total||0),0);
+  el('xmlImportResumo').className='xml-import-summary';
+  el('xmlImportResumo').innerHTML=xmlImportPreview.length
+    ? `<strong>${xmlImportPreview.length} XML(s)</strong> · ${itens.length} itens · ${novos} novos · ${existentes} já cadastrados · Total ${money(total)}${duplicadas?` · <span class="xml-duplicate">${duplicadas} NF-e já importada(s)</span>`:''}`
+    :'Selecione um ou vários XMLs de NF-e.';
+  el('xmlPreviewWrap').style.display=xmlImportPreview.length?'block':'none';
+  el('aplicarXmlBtn').disabled=!valid.length;
+  el('limparXmlBtn').disabled=!xmlImportPreview.length;
+  const rows=[];
+  xmlImportPreview.forEach(n=>{
+    if(n.duplicate){
+      rows.push(`<tr><td>#${esc(n.notaNumero)}</td><td>${esc(n.fornecedor.nome)}</td><td colspan="6">Esta NF-e já foi importada anteriormente.</td><td class="xml-duplicate">Duplicada</td></tr>`);
+      return;
+    }
+    n.itens.forEach(i=>{
+      const existing=findExistingXmlProduct(i);
+      rows.push(`<tr><td>#${esc(n.notaNumero)}</td><td>${esc(n.fornecedor.nome)}</td><td>${esc(i.barcode||i.sku)}</td><td>${esc(i.nome)}</td><td>${Number(i.qtd).toLocaleString('pt-BR',{maximumFractionDigits:3})}</td><td>${esc(i.unidade)}</td><td>${money(i.custo)}</td><td>${money(i.total)}</td><td class="${existing?'xml-existing':'xml-new'}">${existing?'Atualizar estoque':'Novo produto'}</td></tr>`);
+    });
+  });
+  el('xmlPreviewTbody').innerHTML=rows.join('')||'<tr><td colspan="9" class="empty">Nenhum item encontrado.</td></tr>';
+}
+async function loadXmlFiles(files){
+  xmlImportPreview=[];
+  const errors=[];
+  for(const file of [...files]){
+    try{
+      const parsed=parseNfeXml(await file.text(),file.name);
+      parsed.duplicate=Boolean(parsed.chave&&state.xmlImportados.includes(parsed.chave));
+      xmlImportPreview.push(parsed);
+    }catch(err){errors.push(err.message||String(err))}
+  }
+  renderXmlPreview();
+  if(errors.length)alert('Alguns arquivos não puderam ser lidos:\n\n'+errors.join('\n'));
+}
+function ensureXmlSupplier(forn){
+  const doc=String(forn.doc||'').replace(/\D/g,'');
+  let existing=state.fornecedores.find(f=>String(f.doc||'').replace(/\D/g,'')===doc && doc);
+  if(!existing)existing=state.fornecedores.find(f=>String(f.nome||'').trim().toLowerCase()===String(forn.nome||'').trim().toLowerCase());
+  if(existing)return existing;
+  const novo={id:uid(),nome:forn.nome||'Fornecedor XML',doc:forn.doc||'',telefone:''};
+  state.fornecedores.push(novo);
+  return novo;
+}
+function upsertXmlProduct(item){
+  let p=findExistingXmlProduct(item);
+  if(p){
+    p.estoque=Number(p.estoque||0)+Number(item.qtd||0);
+    if(Number(item.custo)>0)p.custo=Number(item.custo);
+    if(item.barcode&&!p.barcode)p.barcode=item.barcode;
+    if(item.ncm)p.ncm=item.ncm;
+    if(item.cest)p.cest=item.cest;
+    if(item.cfop)p.cfop=item.cfop;
+    if(item.unidade)p.unidade=item.unidade;
+    return {produto:p,novo:false};
+  }
+  p={
+    id:uid(),sku:item.sku||item.barcode||uid().slice(0,8),nome:item.nome||'Produto XML',
+    barcode:item.barcode||'',categoria:'',marca:'',setor:'',custo:Number(item.custo||0),venda:0,
+    estoque:Number(item.qtd||0),minimo:0,unidade:item.unidade||'UN',
+    ncm:item.ncm||'',cest:item.cest||'',cfop:item.cfop||'',cst:'',origem:'0'
+  };
+  state.produtos.push(p);
+  return {produto:p,novo:true};
+}
+function aplicarXmlsNoEstoque(){
+  const notas=xmlImportPreview.filter(n=>!n.duplicate);
+  if(!notas.length)return alert('Nenhuma NF-e nova para importar.');
+  const status=el('xmlCompraStatus').value;
+  let novos=0,atualizados=0,itensTotal=0,valorTotal=0;
+  for(const nota of notas){
+    const forn=ensureXmlSupplier(nota.fornecedor);
+    for(const item of nota.itens){
+      const {produto,novo}=upsertXmlProduct(item);
+      if(novo)novos++;else atualizados++;
+      itensTotal++;
+      const total=Number(item.total||0)||Number(item.qtd||0)*Number(item.custo||0);
+      valorTotal+=total;
+      state.compras.push({
+        id:uid(),fornecedorId:forn.id,produtoId:produto.id,qtd:Number(item.qtd||0),
+        custoUnit:Number(item.custo||0),total,status,data:nota.dataEmissao||todayISO(),
+        xmlChave:nota.chave||'',notaNumero:nota.notaNumero,origem:'xml'
+      });
+      state.movimentos.push({
+        id:uid(),produtoId:produto.id,tipo:'entrada',qtd:Number(item.qtd||0),
+        obs:`NF-e #${nota.notaNumero} - ${forn.nome}`,data:nota.dataEmissao||todayISO()
+      });
+    }
+    const totalNota=Number(nota.total||0);
+    state.financeiro.push({
+      id:uid(),tipo:'despesa',descricao:`NF-e #${nota.notaNumero} - ${forn.nome}`,
+      valor:totalNota,status:status==='pago'?'pago':'aberto',data:nota.dataEmissao||todayISO()
+    });
+    if(status==='aberto'){
+      if(nota.parcelas?.length){
+        nota.parcelas.forEach((parc,idx)=>state.contas.push({
+          id:uid(),tipo:'despesa',descricao:`NF-e #${nota.notaNumero} - Parcela ${parc.numero||idx+1}/${nota.parcelas.length}`,
+          valor:Number(parc.valor||0),vencimento:parc.vencimento||new Date().toISOString().slice(0,10),
+          status:'aberto',origem:'xml',data:nota.dataEmissao||todayISO()
+        }));
+      }else{
+        state.contas.push({
+          id:uid(),tipo:'despesa',descricao:`NF-e #${nota.notaNumero} - ${forn.nome}`,
+          valor:totalNota,vencimento:new Date().toISOString().slice(0,10),status:'aberto',origem:'xml',data:nota.dataEmissao||todayISO()
+        });
+      }
+    }
+    if(nota.chave&&!state.xmlImportados.includes(nota.chave))state.xmlImportados.push(nota.chave);
+  }
+  xmlImportPreview=[];
+  el('xmlNfeInput').value='';
+  save();
+  renderXmlPreview();
+  alert(`Importação concluída.\n\n${itensTotal} itens processados\n${novos} produtos novos\n${atualizados} produtos atualizados\nTotal das notas: ${money(valorTotal)}\n\nProdutos novos entram com preço de venda R$ 0,00 para você definir antes de vender.`);
+}
+el('xmlNfeInput').addEventListener('change',e=>loadXmlFiles(e.target.files));
+el('aplicarXmlBtn').onclick=()=>{
+  const valid=xmlImportPreview.filter(n=>!n.duplicate);
+  if(!valid.length)return;
+  const itens=valid.reduce((a,n)=>a+n.itens.length,0);
+  if(confirm(`Importar ${valid.length} NF-e com ${itens} itens para o estoque?\n\nO custo será atualizado pela nota e produtos novos serão cadastrados.`))aplicarXmlsNoEstoque();
+};
+el('limparXmlBtn').onclick=()=>{
+  xmlImportPreview=[];el('xmlNfeInput').value='';renderXmlPreview();
+};
+
+
 function renderCompras(){
   state.compras=state.compras||[];
+  if(el('xmlPreviewTbody'))renderXmlPreview();
   state.fornecedores=state.fornecedores||[];
   el('compraFornecedor').innerHTML='<option value="">Selecione o fornecedor</option>'+state.fornecedores.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join('');
   el('compraProduto').innerHTML='<option value="">Selecione a mercadoria</option>'+state.produtos.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('');
