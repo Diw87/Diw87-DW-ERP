@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#111827" />
-  <title>DW ERP Supermercado — V2.0</title>
+  <title>DW ERP Supermercado — V2.3 Gerencial</title>
   
   <style>
 
@@ -81,16 +81,21 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
 .xml-import-panel{margin-bottom:16px}.xml-import-panel .panel-head small{display:block;color:var(--muted);font-weight:400;margin-top:3px}.xml-import-controls{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 16px}.xml-import-summary{margin:0 18px 14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}.xml-import-summary strong{color:var(--primary-dark)}.xml-preview-wrap{max-height:420px;overflow:auto}.xml-new{color:#0369a1;font-weight:700}.xml-existing{color:#15803d;font-weight:700}.xml-duplicate{color:#b91c1c;font-weight:700}
 @media(max-width:760px){.xml-import-controls{display:grid;grid-template-columns:1fr}.xml-import-controls .btn,.xml-import-controls .input{width:100%}}
 .promo-tag{display:inline-block;margin-top:4px;font-size:10px;font-weight:800;color:#b91c1c}.inv-count{min-width:110px}
+
+.report-grid .panel{min-height:280px}.report-bar{margin:10px 0}.report-bar-head{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:4px}.report-track{height:9px;background:#e5e7eb;border-radius:999px;overflow:hidden}.report-fill{height:100%;background:var(--primary);border-radius:999px}.report-list-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}.report-list-row small{display:block;color:var(--muted)}.report-empty{padding:22px;text-align:center;color:var(--muted)}
+.label-check{width:18px;height:18px}
+@media print{#view-relatorios .toolbar,.sidebar,.topbar{display:none!important}#view-relatorios{display:block!important}.main{margin:0!important;width:100%!important;padding:0!important}}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-mark">DW</div>
-        <div><strong>DW ERP</strong><small>Supermercado V2.2</small></div>
+        <div><strong>DW ERP</strong><small>Supermercado V2.3</small></div>
       </div>
 
       <nav id="nav">
@@ -111,6 +116,8 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
         <button class="nav-item" data-view="fiscal">🧾 <span>Fiscal</span></button>
         <button class="nav-item" data-view="caixa">🧮 <span>Caixa</span></button>
         <button class="nav-item" data-view="contas">📅 <span>Contas</span></button>
+        <button class="nav-item" data-view="relatorios">📈 <span>Relatórios</span></button>
+        <button class="nav-item" data-view="etiquetas">🏷️ <span>Etiquetas</span></button>
         <button class="nav-item" data-view="configuracoes">⚙️ <span>Configurações</span></button>
       </nav>
 
@@ -628,7 +635,66 @@ nav{display:flex;flex-direction:column;gap:6px}.nav-item{border:0;background:tra
         </section>
       </section>
 
-<section id="view-configuracoes" class="view">
+<section id="view-relatorios" class="view">
+        <div class="toolbar">
+          <label>De <input id="relDataIni" class="input" type="date" /></label>
+          <label>Até <input id="relDataFim" class="input" type="date" /></label>
+          <button class="btn primary" id="atualizarRelBtn">Atualizar</button>
+          <button class="btn ghost" id="imprimirRelBtn">Imprimir relatório</button>
+        </div>
+
+        <div class="cards-grid">
+          <article class="metric-card"><span>Faturamento</span><strong id="relFaturamento">R$ 0,00</strong><small>Vendas pagas no período</small></article>
+          <article class="metric-card"><span>Lucro bruto</span><strong id="relLucro">R$ 0,00</strong><small>Venda menos custo dos itens</small></article>
+          <article class="metric-card"><span>Ticket médio</span><strong id="relTicket">R$ 0,00</strong><small>Média por venda</small></article>
+          <article class="metric-card"><span>Itens vendidos</span><strong id="relItens">0</strong><small>Quantidade total</small></article>
+        </div>
+
+        <div class="two-col report-grid">
+          <section class="panel">
+            <div class="panel-head"><h2>Produtos mais vendidos</h2><span class="badge ok">Top 10</span></div>
+            <div id="relTopProdutos"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Formas de pagamento</h2></div>
+            <div id="relPagamentos"></div>
+          </section>
+        </div>
+
+        <div class="two-col report-grid" style="margin-top:16px">
+          <section class="panel">
+            <div class="panel-head"><h2>Perdas no período</h2></div>
+            <div id="relPerdas"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Sugestão de reposição</h2><span class="badge warn">Estoque</span></div>
+            <div id="relReposicao"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-etiquetas" class="view">
+        <div class="toolbar">
+          <input id="etiquetaBusca" class="input grow" placeholder="Buscar produto, código ou categoria..." />
+          <select id="etiquetaFiltro" class="input">
+            <option value="todos">Todos</option>
+            <option value="promocao">Em promoção</option>
+            <option value="estoqueBaixo">Estoque baixo</option>
+          </select>
+          <button class="btn ghost" id="selecionarEtiquetasBtn">Selecionar visíveis</button>
+          <button class="btn primary" id="imprimirEtiquetasBtn">Imprimir selecionadas</button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th></th><th>Produto</th><th>Código</th><th>Preço</th><th>Promoção</th><th>Estoque</th></tr></thead>
+              <tbody id="etiquetasTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-configuracoes" class="view">
         <div class="settings-grid">
           <section class="panel">
             <div class="panel-head"><h2>Empresa</h2></div>
@@ -923,6 +989,8 @@ const meta={
   fiscal:['Fiscal','Preparação para NF-e e NFC-e'],
   caixa:['Caixa','Abertura, fechamento e conferência'],
   contas:['Contas','Contas a pagar e a receber'],
+  relatorios:['Relatórios','Vendas, lucro, ranking, perdas e reposição'],
+  etiquetas:['Etiquetas','Impressão de preços e códigos de barras'],
   configuracoes:['Configurações','Empresa, Pix, certificado e backup']
 };
 
@@ -2284,6 +2352,135 @@ window.baixarConta=id=>{
   save();
 };
 
+function localDateValue(d){
+  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+}
+function dataDentroPeriodo(value,ini,fim){
+  if(!value)return false;
+  const d=new Date(value);
+  const s=localDateValue(d);
+  return (!ini||s>=ini)&&(!fim||s<=fim);
+}
+function vendasPeriodo(){
+  const ini=el('relDataIni')?.value||'',fim=el('relDataFim')?.value||'';
+  return state.vendas.filter(v=>v.status==='pago'&&dataDentroPeriodo(v.data,ini,fim));
+}
+function renderReportBars(containerId,rows,valueKey,labelKey,formatValue){
+  const box=el(containerId);
+  if(!rows.length){box.innerHTML='<div class="report-empty">Sem dados no período.</div>';return}
+  const max=Math.max(...rows.map(x=>Number(x[valueKey]||0)),1);
+  box.innerHTML=rows.map(x=>{
+    const pct=Math.max(2,Math.round(Number(x[valueKey]||0)/max*100));
+    return `<div class="report-bar"><div class="report-bar-head"><span>${esc(x[labelKey])}</span><strong>${formatValue(x[valueKey],x)}</strong></div><div class="report-track"><div class="report-fill" style="width:${pct}%"></div></div></div>`;
+  }).join('');
+}
+function renderRelatorios(){
+  if(!el('relDataIni').value||!el('relDataFim').value){
+    const fim=new Date(),ini=new Date();ini.setDate(ini.getDate()-29);
+    if(!el('relDataIni').value)el('relDataIni').value=localDateValue(ini);
+    if(!el('relDataFim').value)el('relDataFim').value=localDateValue(fim);
+  }
+  const vendas=vendasPeriodo();
+  const faturamento=vendas.reduce((a,v)=>a+Number(v.total||0),0);
+  const lucro=vendas.reduce((a,v)=>{
+    const custo=(v.itens||[]).reduce((s,i)=>s+Number(i.unitCost??state.produtos.find(p=>p.id===i.produtoId)?.custo??0)*Number(i.qtd||0),0);
+    return a+Number(v.total||0)-custo;
+  },0);
+  const itens=vendas.reduce((a,v)=>a+(v.itens||[]).reduce((s,i)=>s+Number(i.qtd||0),0),0);
+  el('relFaturamento').textContent=money(faturamento);
+  el('relLucro').textContent=money(lucro);
+  el('relTicket').textContent=money(vendas.length?faturamento/vendas.length:0);
+  el('relItens').textContent=Number(itens).toLocaleString('pt-BR',{maximumFractionDigits:3});
+
+  const mapaProd={};
+  vendas.forEach(v=>(v.itens||[]).forEach(i=>{
+    const p=state.produtos.find(p=>p.id===i.produtoId);
+    const key=i.produtoId||i.nome||'produto';
+    if(!mapaProd[key])mapaProd[key]={nome:i.nome||p?.nome||'Produto',qtd:0,valor:0};
+    mapaProd[key].qtd+=Number(i.qtd||0);
+    mapaProd[key].valor+=Number(i.unitPrice??p?.venda??0)*Number(i.qtd||0);
+  }));
+  const top=Object.values(mapaProd).sort((a,b)=>b.qtd-a.qtd).slice(0,10);
+  renderReportBars('relTopProdutos',top,'qtd','nome',(v)=>Number(v).toLocaleString('pt-BR',{maximumFractionDigits:3}));
+
+  const mapaPg={};
+  vendas.forEach(v=>{const k=v.pagamento||'outro';mapaPg[k]=(mapaPg[k]||0)+Number(v.total||0)});
+  const pagamentos=Object.entries(mapaPg).map(([nome,valor])=>({nome,valor})).sort((a,b)=>b.valor-a.valor);
+  renderReportBars('relPagamentos',pagamentos,'valor','nome',(v)=>money(v));
+
+  const ini=el('relDataIni').value,fim=el('relDataFim').value;
+  const perdas=state.perdas.filter(p=>dataDentroPeriodo(p.data,ini,fim));
+  const perdasTotal=perdas.reduce((a,p)=>a+Number(p.valorCusto||0),0);
+  const porMotivo={};
+  perdas.forEach(p=>{porMotivo[p.motivo||'outro']=(porMotivo[p.motivo||'outro']||0)+Number(p.valorCusto||0)});
+  el('relPerdas').innerHTML=perdas.length
+    ? `<div class="report-list-row"><div><strong>Total de perdas</strong><small>${perdas.length} registro(s)</small></div><strong>${money(perdasTotal)}</strong></div>`+
+      Object.entries(porMotivo).sort((a,b)=>b[1]-a[1]).map(([m,v])=>`<div class="report-list-row"><span>${esc(m)}</span><strong>${money(v)}</strong></div>`).join('')
+    : '<div class="report-empty">Nenhuma perda registrada no período.</div>';
+
+  const vendas30=state.vendas.filter(v=>v.status==='pago'&&new Date(v.data)>=new Date(Date.now()-30*86400000));
+  const giro={};
+  vendas30.forEach(v=>(v.itens||[]).forEach(i=>{giro[i.produtoId]=(giro[i.produtoId]||0)+Number(i.qtd||0)}));
+  const reposicao=state.produtos.map(p=>{
+    const vendidos30=Number(giro[p.id]||0);
+    const mediaDia=vendidos30/30;
+    const alvo=Math.max(Number(p.minimo||0)*2,Math.ceil(mediaDia*14));
+    const sugerido=Math.max(0,alvo-Number(p.estoque||0));
+    return {p,sugerido,vendidos30};
+  }).filter(x=>x.sugerido>0).sort((a,b)=>b.sugerido-a.sugerido).slice(0,20);
+  el('relReposicao').innerHTML=reposicao.length
+    ? reposicao.map(x=>`<div class="report-list-row"><div><strong>${esc(x.p.nome)}</strong><small>Estoque ${Number(x.p.estoque||0).toLocaleString('pt-BR',{maximumFractionDigits:3})} · vendeu 30d: ${x.vendidos30.toLocaleString('pt-BR',{maximumFractionDigits:3})}</small></div><strong>Comprar ${x.sugerido.toLocaleString('pt-BR',{maximumFractionDigits:3})}</strong></div>`).join('')
+    : '<div class="report-empty">Nenhuma reposição sugerida.</div>';
+}
+el('atualizarRelBtn').onclick=renderRelatorios;
+el('imprimirRelBtn').onclick=()=>window.print();
+el('relDataIni').addEventListener('change',renderRelatorios);
+el('relDataFim').addEventListener('change',renderRelatorios);
+
+function etiquetaProdutosVisiveis(){
+  const q=(el('etiquetaBusca')?.value||'').toLowerCase(),filtro=el('etiquetaFiltro')?.value||'todos';
+  return state.produtos.filter(p=>{
+    const match=[p.nome,p.sku,p.barcode,p.categoria,p.marca].join(' ').toLowerCase().includes(q);
+    if(!match)return false;
+    if(filtro==='promocao')return promoAtiva(p);
+    if(filtro==='estoqueBaixo')return Number(p.estoque)<=Number(p.minimo);
+    return true;
+  });
+}
+function renderEtiquetas(){
+  const lista=etiquetaProdutosVisiveis();
+  el('etiquetasTbody').innerHTML=lista.map(p=>{
+    const pr=precoProduto(p,1);
+    return `<tr><td><input class="label-check etiqueta-check" data-id="${p.id}" type="checkbox" /></td><td><strong>${esc(p.nome)}</strong><br><small>${esc(p.marca||p.categoria||'')}</small></td><td>${esc(p.barcode||p.sku||'-')}</td><td><strong>${money(pr.preco)}</strong></td><td>${promoAtiva(p)?'<span class="badge ok">Sim</span>':'-'}</td><td>${Number(p.estoque||0).toLocaleString('pt-BR',{maximumFractionDigits:3})}</td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">Nenhum produto encontrado.</td></tr>';
+}
+el('etiquetaBusca').addEventListener('input',renderEtiquetas);
+el('etiquetaFiltro').addEventListener('change',renderEtiquetas);
+el('selecionarEtiquetasBtn').onclick=()=>document.querySelectorAll('.etiqueta-check').forEach(x=>x.checked=true);
+
+function barcodeSvg(code){
+  if(!window.JsBarcode)return '';
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  try{
+    JsBarcode(svg,String(code||''),{format:'CODE128',displayValue:true,fontSize:12,height:38,margin:2,width:1.5});
+    return svg.outerHTML;
+  }catch{return ''}
+}
+el('imprimirEtiquetasBtn').onclick=()=>{
+  const ids=[...document.querySelectorAll('.etiqueta-check:checked')].map(x=>x.dataset.id);
+  if(!ids.length)return alert('Selecione pelo menos um produto.');
+  const produtos=ids.map(id=>state.produtos.find(p=>p.id===id)).filter(Boolean);
+  const labels=produtos.map(p=>{
+    const pr=precoProduto(p,1),code=p.barcode||p.sku||'';
+    return `<div class="label"><div class="name">${esc(p.nome)}</div><div class="price">${money(pr.preco)}</div>${promoAtiva(p)?'<div class="promo">OFERTA</div>':''}<div class="barcode">${barcodeSvg(code)}</div></div>`;
+  }).join('');
+  const w=window.open('','_blank','width=1000,height=800');
+  if(!w)return alert('Permita pop-ups para imprimir etiquetas.');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Etiquetas DW ERP</title><style>@page{margin:5mm}body{font-family:Arial,sans-serif;margin:0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.label{border:1px solid #bbb;border-radius:6px;padding:5mm;text-align:center;min-height:45mm;break-inside:avoid}.name{font-weight:700;font-size:13px;min-height:30px}.price{font-size:26px;font-weight:900;margin:4px 0}.promo{display:inline-block;background:#111;color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;margin-bottom:3px}.barcode svg{max-width:100%;height:48px}@media print{.label{border:1px solid #ddd}}</style></head><body><div class="grid">${labels}</div><script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+};
+
+
 function renderConfig(){
   el('cfgEmpresa').value=state.config.empresa||'';
   el('cfgCnpj').value=state.config.cnpj||'';
@@ -2318,7 +2515,7 @@ el('importInput').addEventListener('change',async e=>{
   try{const data=JSON.parse(await file.text());state=data;save();alert('Backup importado com sucesso.')}catch(err){alert('Arquivo inválido.')}
 });
 
-function renderAll(){renderDashboard();renderProdutos();renderEstoque();renderValidade();renderInventario();renderPdv();renderOrcamentos();renderPedidos();renderClientes();renderFornecedores();renderCompras();renderVendas();renderFinanceiro();renderVendedores();renderFiscal();renderCaixa();renderContas();renderConfig();atualizarParcelas()}
+function renderAll(){renderDashboard();renderProdutos();renderEstoque();renderValidade();renderInventario();renderPdv();renderOrcamentos();renderPedidos();renderClientes();renderFornecedores();renderCompras();renderVendas();renderFinanceiro();renderVendedores();renderFiscal();renderCaixa();renderContas();renderRelatorios();renderEtiquetas();renderConfig();atualizarParcelas()}
 renderAll();
 initMobileScannerMode();
 
